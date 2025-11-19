@@ -31,6 +31,7 @@ from PIL import Image
 
 load_dotenv(override=True)
 
+
 class VisualInspectorTool(Tool):
     name = "inspect_file_as_image"
     description = """
@@ -58,8 +59,13 @@ This tool supports the following image formats: [".jpg", ".jpeg", ".png", ".gif"
         self.gpt_url = os.getenv("OPENAI_BASE_URL")
 
     def _validate_file_type(self, file_path: str):
-        if not any(file_path.lower().endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp"]):
-            raise ValueError("Unsupported file type. Use the appropriate tool for text/audio files.")
+        if not any(
+            file_path.lower().endswith(ext)
+            for ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
+        ):
+            raise ValueError(
+                "Unsupported file type. Use the appropriate tool for text/audio files."
+            )
 
     def _resize_image(self, image_path: str) -> str:
         img = Image.open(image_path)
@@ -97,10 +103,9 @@ This tool supports the following image formats: [".jpg", ".jpeg", ".png", ".gif"
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode("utf-8")
 
-
     def forward(self, file_path: str, question: Optional[str] = None) -> str:
         self._validate_file_type(file_path)
-        
+
         if not question:
             question = "Please write a detailed caption for this image."
         try:
@@ -113,7 +118,12 @@ This tool supports the following image formats: [".jpg", ".jpeg", ".png", ".gif"
                         "role": "user",
                         "content": [
                             {"type": "text", "text": question},
-                            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{base64_image}"}},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{mime_type};base64,{base64_image}"
+                                },
+                            },
                         ],
                     }
                 ],
@@ -123,13 +133,11 @@ This tool supports the following image formats: [".jpg", ".jpeg", ".png", ".gif"
 
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.gpt_key}"
+                "Authorization": f"Bearer {self.gpt_key}",
             }
 
             response = requests.post(
-                f"{self.gpt_url}/chat/completions",
-                headers=headers,
-                json=payload
+                f"{self.gpt_url}/chat/completions", headers=headers, json=payload
             )
             response.raise_for_status()
             description = response.json()["choices"][0]["message"]["content"]

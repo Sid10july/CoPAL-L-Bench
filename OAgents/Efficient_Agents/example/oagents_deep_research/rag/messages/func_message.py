@@ -76,9 +76,7 @@ class FunctionCallingMessage(BaseMessage):
 
     def to_sharegpt(
         self,
-        function_format: Optional[
-            FunctionCallFormatter[ToolCall, ToolResponse]
-        ] = None,
+        function_format: Optional[FunctionCallFormatter[ToolCall, ToolResponse]] = None,
     ) -> ShareGPTMessage:
         r"""Convert FunctionCallingMessage to ShareGPT message.
 

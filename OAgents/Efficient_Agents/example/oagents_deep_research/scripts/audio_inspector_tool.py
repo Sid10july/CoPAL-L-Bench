@@ -23,6 +23,7 @@ from smolagents.pricing import calculate_cost
 import openai
 import os
 
+
 # Placeholder for a function to get audio duration. You'll need to implement this.
 # For example, using a library like pydub: from pydub import AudioSegment; duration = AudioSegment.from_file(file_path).duration_seconds
 def get_audio_duration_seconds(file_path: str) -> float:
@@ -30,11 +31,15 @@ def get_audio_duration_seconds(file_path: str) -> float:
     # Example implementation (replace with actual logic):
     try:
         from pydub import AudioSegment
+
         audio = AudioSegment.from_file(file_path)
         return audio.duration_seconds
     except Exception as e:
-        logger.warning(f"Could not get audio duration for {file_path} using pydub: {e}. Returning 0.")
-        return 0.0 
+        logger.warning(
+            f"Could not get audio duration for {file_path} using pydub: {e}. Returning 0."
+        )
+        return 0.0
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +53,7 @@ whisper_cost_tracker = {
 
 WHISPER_PRICE_PER_MINUTE = 0.006
 
+
 def reset_whisper_cost_tracker():
     global whisper_cost_tracker
     whisper_cost_tracker = {
@@ -57,8 +63,10 @@ def reset_whisper_cost_tracker():
         "api_calls": 0,
     }
 
+
 def get_cumulative_whisper_cost_details() -> dict:
     return whisper_cost_tracker.copy()
+
 
 class AudioInspectorTool(Tool):
     name = "inspect_file_as_audio"
@@ -89,7 +97,9 @@ This tool supports the following audio formats: [".mp3", ".m4a", ".wav"]. For ot
     def _validate_file_type(self, file_path: str):
         """Validate if the file type is a supported audio format"""
         if not any(file_path.endswith(ext) for ext in [".mp3", ".m4a", ".wav"]):
-            raise ValueError("Unsupported file type. Use the appropriate tool for text/image files.")
+            raise ValueError(
+                "Unsupported file type. Use the appropriate tool for text/image files."
+            )
 
     def transcribe_audio(self, file_path: str) -> str:
         """Transcribe audio using OpenAI Whisper API"""
@@ -97,8 +107,7 @@ This tool supports the following audio formats: [".mp3", ".m4a", ".wav"]. For ot
         try:
             with open(file_path, "rb") as audio_file:
                 transcription = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file
+                    model="whisper-1", file=audio_file
                 )
             # Cost tracking for Whisper
             audio_duration_seconds = get_audio_duration_seconds(file_path)
@@ -122,30 +131,31 @@ This tool supports the following audio formats: [".mp3", ".m4a", ".wav"]. For ot
 
     def forward(self, file_path: str, question: Optional[str] = None) -> str:
         self._validate_file_type(file_path)
-        
+
         try:
             transcript = self.transcribe_audio(file_path)
         except Exception as e:
             return f"Audio processing error: {str(e)}"
-        
+
         if not question:
             return f"Audio transcription:\n{transcript[:self.text_limit]}"
         messages = [
             {
                 "role": MessageRole.SYSTEM,
-                "content": [{
-                    "type": "text",
-                    "text": f"Here is the an audio transcription:\n{transcript[:self.text_limit]}\n"
-                            "Answer the following question based on the audio content using the format:1. Brief answer\n2. Detailed analysis\n3. Relevant context\n\n"
-                }]
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Here is the an audio transcription:\n{transcript[:self.text_limit]}\n"
+                        "Answer the following question based on the audio content using the format:1. Brief answer\n2. Detailed analysis\n3. Relevant context\n\n",
+                    }
+                ],
             },
             {
                 "role": MessageRole.USER,
-                "content": [{
-                    "type": "text",
-                    "text": f"Please answer the question: {question}"
-                }]
-            }
+                "content": [
+                    {"type": "text", "text": f"Please answer the question: {question}"}
+                ],
+            },
         ]
-        
+
         return self.model(messages).content

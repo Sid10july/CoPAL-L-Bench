@@ -330,6 +330,39 @@ def main() -> None:
     # region Construct variable, valid config
     config_utility.preprocess()
     task, agent, callback_dict = config_utility.construct()
+    #####
+    from src.metrics.cost_tracker import CostTracker, CostRegistry
+    from src.metrics.llm_counting_wrapper import CountingLLM
+
+    # create a tracker for this run
+    cost_tracker = CostTracker(
+        # Optional: define prices here if you’re using a paid provider
+        # CostRegistry({"meta-llama/Llama-3.1-8B-Instruct": {"in": 0.0, "out": 0.0}})
+    )
+
+    # Figure out model name + tokenizer on the agent/llm object
+    llm_obj = getattr(agent, "llm", None) or getattr(agent, "model", None)
+    model_name = None
+    for attr in ("model_name_or_path", "model_id", "name", "model"):
+        if hasattr(llm_obj, attr):
+            model_name = getattr(llm_obj, attr)
+            break
+    model_name = str(model_name or "unknown-model")
+
+    tokenizer = getattr(llm_obj, "tokenizer", None)
+
+    # Wrap
+    wrapped = CountingLLM(
+        llm_obj, model_name=model_name, tokenizer=tokenizer, cost_tracker=cost_tracker
+    )
+    if hasattr(agent, "llm"):
+        agent.llm = wrapped
+    elif hasattr(agent, "model"):
+        agent.model = wrapped
+    else:
+        # Worst case: the agent keeps a callable function attribute — try common names:
+        setattr(agent, "llm", wrapped)
+    #####
     config_utility.postprocess(task, agent)
     config_utility.validate(task, agent)
     ContinualAgentBenchException.set_record_file(path_config.exception_record_file_path)
@@ -428,6 +461,23 @@ def main() -> None:
     )
     logger.info(f"Metric file has been saved to {assignment_config.output_dir}.")
     # endregion
+    # --------------------------------------
+    # CostTracker save
+    # --------------------------------------
+    try:
+        from pathlib import Path
+
+        run_dir = Path(
+            assignment_config.output_dir
+        )  # same directory metrics are already saved to
+        (run_dir / "metrics").mkdir(parents=True, exist_ok=True)
+        cost_tracker.save(str(run_dir / "metrics" / "token_cost_summary.json"))
+        logger.info(
+            f"[CostTracker] wrote {run_dir/'metrics'/'token_cost_summary.json'}"
+        )
+    except Exception as e:
+        logger.error(f"[CostTracker] failed to save summary: {e}")
+    # --------------------------------------
     # region Release
     task.release()
     # endregion

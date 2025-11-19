@@ -45,7 +45,12 @@ from ._function_type_hints_utils import (
 )
 from .agent_types import handle_agent_input_types, handle_agent_output_types
 from .tool_validation import MethodChecker, validate_tool_attributes
-from .utils import _is_package_available, _is_pillow_available, get_source, instance_to_source
+from .utils import (
+    _is_package_available,
+    _is_pillow_available,
+    get_source,
+    instance_to_source,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -130,10 +135,12 @@ class Tool:
                     f"Attribute {attr} should have type {expected_type.__name__}, got {type(attr_value)} instead."
                 )
         for input_name, input_content in self.inputs.items():
-            assert isinstance(input_content, dict), f"Input '{input_name}' should be a dictionary."
-            assert "type" in input_content and "description" in input_content, (
-                f"Input '{input_name}' should have keys 'type' and 'description', has only {list(input_content.keys())}."
-            )
+            assert isinstance(
+                input_content, dict
+            ), f"Input '{input_name}' should be a dictionary."
+            assert (
+                "type" in input_content and "description" in input_content
+            ), f"Input '{input_name}' should have keys 'type' and 'description', has only {list(input_content.keys())}."
             if input_content["type"] not in AUTHORIZED_TYPES:
                 raise Exception(
                     f"Input '{input_name}': type '{input_content['type']}' is not an authorized value, should be one of {AUTHORIZED_TYPES}."
@@ -153,21 +160,23 @@ class Tool:
                     "Tool's 'forward' method should take 'self' as its first argument, then its next arguments should match the keys of tool attribute 'inputs'."
                 )
 
-            json_schema = _convert_type_hints_to_json_schema(self.forward, error_on_missing_type_hints=False)[
+            json_schema = _convert_type_hints_to_json_schema(
+                self.forward, error_on_missing_type_hints=False
+            )[
                 "properties"
             ]  # This function will not raise an error on missing docstrings, contrary to get_json_schema
             for key, value in self.inputs.items():
-                assert key in json_schema, (
-                    f"Input '{key}' should be present in function signature, found only {json_schema.keys()}"
-                )
+                assert (
+                    key in json_schema
+                ), f"Input '{key}' should be present in function signature, found only {json_schema.keys()}"
                 if "nullable" in value:
-                    assert "nullable" in json_schema[key], (
-                        f"Nullable argument '{key}' in inputs should have key 'nullable' set to True in function signature."
-                    )
+                    assert (
+                        "nullable" in json_schema[key]
+                    ), f"Nullable argument '{key}' in inputs should have key 'nullable' set to True in function signature."
                 if key in json_schema and "nullable" in json_schema[key]:
-                    assert "nullable" in value, (
-                        f"Nullable argument '{key}' in function signature should have key 'nullable' set to True in inputs."
-                    )
+                    assert (
+                        "nullable" in value
+                    ), f"Nullable argument '{key}' in function signature should have key 'nullable' set to True in inputs."
 
     def forward(self, *args, **kwargs):
         return NotImplementedError("Write this method in your subclass of `Tool`.")
@@ -257,13 +266,22 @@ class Tool:
 
             validate_tool_attributes(self.__class__)
 
-            tool_code = "from typing import Any, Optional\n" + instance_to_source(self, base_cls=Tool)
+            tool_code = "from typing import Any, Optional\n" + instance_to_source(
+                self, base_cls=Tool
+            )
 
-        requirements = {el for el in get_imports(tool_code) if el not in sys.stdlib_module_names} | {"oagents"}
+        requirements = {
+            el for el in get_imports(tool_code) if el not in sys.stdlib_module_names
+        } | {"oagents"}
 
         return {"name": self.name, "code": tool_code, "requirements": requirements}
 
-    def save(self, output_dir: str, tool_file_name: str = "tool", make_gradio_app: bool = True):
+    def save(
+        self,
+        output_dir: str,
+        tool_file_name: str = "tool",
+        make_gradio_app: bool = True,
+    ):
         """
         Saves the relevant code files for your tool so it can be pushed to the Hub. This will copy the code of your
         tool in `output_dir` as well as autogenerate:
@@ -345,12 +363,16 @@ class Tool:
             space_sdk="gradio",
         )
         repo_id = repo_url.repo_id
-        metadata_update(repo_id, {"tags": ["oagents", "tool"]}, repo_type="space", token=token)
+        metadata_update(
+            repo_id, {"tags": ["oagents", "tool"]}, repo_type="space", token=token
+        )
 
         with tempfile.TemporaryDirectory() as work_dir:
             # Save all files.
             self.save(work_dir)
-            logger.info(f"Uploading the following files to {repo_id}: {','.join(os.listdir(work_dir))}")
+            logger.info(
+                f"Uploading the following files to {repo_id}: {','.join(os.listdir(work_dir))}"
+            )
             return upload_folder(
                 repo_id=repo_id,
                 commit_message=commit_message,
@@ -500,7 +522,9 @@ class Tool:
                 self.name = name
                 self.description = description
                 self.client = Client(space_id, hf_token=token)
-                space_description = self.client.view_api(return_format="dict", print_info=False)["named_endpoints"]
+                space_description = self.client.view_api(
+                    return_format="dict", print_info=False
+                )["named_endpoints"]
 
                 # If api_name is not defined, take the first of the available APIs for this space
                 if api_name is None:
@@ -513,7 +537,9 @@ class Tool:
                 try:
                     space_description_api = space_description[api_name]
                 except KeyError:
-                    raise KeyError(f"Could not find specified {api_name=} among available api names.")
+                    raise KeyError(
+                        f"Could not find specified {api_name=} among available api names."
+                    )
 
                 self.inputs = {}
                 for parameter in space_description_api["parameters"]:
@@ -590,7 +616,8 @@ class Tool:
                 self._gradio_tool = _gradio_tool
                 func_args = list(inspect.signature(_gradio_tool.run).parameters.items())
                 self.inputs = {
-                    key: {"type": CONVERSION_DICT[value.annotation], "description": ""} for key, value in func_args
+                    key: {"type": CONVERSION_DICT[value.annotation], "description": ""}
+                    for key, value in func_args
                 }
                 self.forward = self._gradio_tool.run
 
@@ -639,7 +666,9 @@ def launch_gradio_demo(tool: Tool):
     try:
         import gradio as gr
     except ImportError:
-        raise ImportError("Gradio should be installed in order to launch a gradio demo.")
+        raise ImportError(
+            "Gradio should be installed in order to launch a gradio demo."
+        )
 
     TYPE_TO_COMPONENT_CLASS_MAPPING = {
         "image": gr.Image,
@@ -656,7 +685,9 @@ def launch_gradio_demo(tool: Tool):
 
     gradio_inputs = []
     for input_name, input_details in tool.inputs.items():
-        input_gradio_component_class = TYPE_TO_COMPONENT_CLASS_MAPPING[input_details["type"]]
+        input_gradio_component_class = TYPE_TO_COMPONENT_CLASS_MAPPING[
+            input_details["type"]
+        ]
         new_component = input_gradio_component_class(label=input_name)
         gradio_inputs.append(new_component)
 
@@ -785,9 +816,14 @@ class ToolCollection:
         ```
         """
         _collection = get_collection(collection_slug, token=token)
-        _hub_repo_ids = {item.item_id for item in _collection.items if item.item_type == "space"}
+        _hub_repo_ids = {
+            item.item_id for item in _collection.items if item.item_type == "space"
+        }
 
-        tools = {Tool.from_hub(repo_id, token, trust_remote_code) for repo_id in _hub_repo_ids}
+        tools = {
+            Tool.from_hub(repo_id, token, trust_remote_code)
+            for repo_id in _hub_repo_ids
+        }
 
         return cls(tools)
 
@@ -844,7 +880,9 @@ def tool(tool_function: Callable) -> Tool:
     """
     tool_json_schema = get_json_schema(tool_function)["function"]
     if "return" not in tool_json_schema:
-        raise TypeHintParsingException("Tool return type not found: make sure your function has a return type hint!")
+        raise TypeHintParsingException(
+            "Tool return type not found: make sure your function has a return type hint!"
+        )
 
     class SimpleTool(Tool):
         def __init__(
@@ -870,9 +908,9 @@ def tool(tool_function: Callable) -> Tool:
         function=tool_function,
     )
     original_signature = inspect.signature(tool_function)
-    new_parameters = [inspect.Parameter("self", inspect.Parameter.POSITIONAL_ONLY)] + list(
-        original_signature.parameters.values()
-    )
+    new_parameters = [
+        inspect.Parameter("self", inspect.Parameter.POSITIONAL_ONLY)
+    ] + list(original_signature.parameters.values())
     new_signature = original_signature.replace(parameters=new_parameters)
     simple_tool.forward.__signature__ = new_signature
     return simple_tool
@@ -944,7 +982,9 @@ class PipelineTool(Tool):
 
         if model is None:
             if self.default_checkpoint is None:
-                raise ValueError("This tool does not implement a default checkpoint, you need to pass one.")
+                raise ValueError(
+                    "This tool does not implement a default checkpoint, you need to pass one."
+                )
             model = self.default_checkpoint
         if pre_processor is None:
             pre_processor = model
@@ -971,10 +1011,14 @@ class PipelineTool(Tool):
                 from transformers import AutoProcessor
 
                 self.pre_processor_class = AutoProcessor
-            self.pre_processor = self.pre_processor_class.from_pretrained(self.pre_processor, **self.hub_kwargs)
+            self.pre_processor = self.pre_processor_class.from_pretrained(
+                self.pre_processor, **self.hub_kwargs
+            )
 
         if isinstance(self.model, str):
-            self.model = self.model_class.from_pretrained(self.model, **self.model_kwargs, **self.hub_kwargs)
+            self.model = self.model_class.from_pretrained(
+                self.model, **self.model_kwargs, **self.hub_kwargs
+            )
 
         if self.post_processor is None:
             self.post_processor = self.pre_processor
@@ -983,7 +1027,9 @@ class PipelineTool(Tool):
                 from transformers import AutoProcessor
 
                 self.post_processor_class = AutoProcessor
-            self.post_processor = self.post_processor_class.from_pretrained(self.post_processor, **self.hub_kwargs)
+            self.post_processor = self.post_processor_class.from_pretrained(
+                self.post_processor, **self.hub_kwargs
+            )
 
         if self.device is None:
             if self.device_map is not None:
@@ -1030,8 +1076,12 @@ class PipelineTool(Tool):
 
         encoded_inputs = self.encode(*args, **kwargs)
 
-        tensor_inputs = {k: v for k, v in encoded_inputs.items() if isinstance(v, torch.Tensor)}
-        non_tensor_inputs = {k: v for k, v in encoded_inputs.items() if not isinstance(v, torch.Tensor)}
+        tensor_inputs = {
+            k: v for k, v in encoded_inputs.items() if isinstance(v, torch.Tensor)
+        }
+        non_tensor_inputs = {
+            k: v for k, v in encoded_inputs.items() if not isinstance(v, torch.Tensor)
+        }
 
         encoded_inputs = send_to_device(tensor_inputs, self.device)
         outputs = self.forward({**encoded_inputs, **non_tensor_inputs})

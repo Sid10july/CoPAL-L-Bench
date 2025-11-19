@@ -44,7 +44,11 @@ from scripts.async_web_crawler import (
     CrawlerArchiveSearchTool,
     SimpleCrawler,
 )
-from scripts.automodel import get_api_model, process_selected_tasks_param, prepare_model_kwargs
+from scripts.automodel import (
+    get_api_model,
+    process_selected_tasks_param,
+    prepare_model_kwargs,
+)
 
 from oagents.memory import ActionStep, PlanningStep, TaskStep
 from tqdm import tqdm
@@ -83,12 +87,12 @@ AUTHORIZED_IMPORTS = [
     "random",
     "re",
     "sys",
-    "shutil"
+    "shutil",
 ]
 
 
 parent_dir = os.path.dirname(os.path.dirname(os.getcwd()))
-env_path = os.path.join(parent_dir, '.env')
+env_path = os.path.join(parent_dir, ".env")
 
 load_dotenv(dotenv_path=env_path, override=True)
 login(os.getenv("HF_TOKEN"))
@@ -97,8 +101,11 @@ logger = logging.getLogger(__name__)
 
 jsonl_lock = threading.Lock()
 
-logger.warning("Make sure you deactivated Tailscale VPN, else some URLs will be blocked!")
+logger.warning(
+    "Make sure you deactivated Tailscale VPN, else some URLs will be blocked!"
+)
 custom_role_conversions = {"tool-call": "assistant", "tool-response": "user"}
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -108,31 +115,90 @@ def parse_args():
     parser.add_argument("--run_name", type=str, default="init_run")
     parser.add_argument("--debug", default=False, action="store_true")
     # infer params
-    parser.add_argument('--planning_interval', type=int, default=1, help='Number of rollouts per state.')
-    parser.add_argument("--max_steps", type=int, default=12, help="Maximum number of steps for ReAct agent.")
-    parser.add_argument("--temperature", default=None, type=float, help= "The temperature for llm generation.")
-    parser.add_argument('--top_p', default=None, type=float, help="The top_p for llm generation.")
-    parser.add_argument('--reflection', action='store_true', default=False, help='Enable reflection')
+    parser.add_argument(
+        "--planning_interval", type=int, default=1, help="Number of rollouts per state."
+    )
+    parser.add_argument(
+        "--max_steps",
+        type=int,
+        default=12,
+        help="Maximum number of steps for ReAct agent.",
+    )
+    parser.add_argument(
+        "--temperature",
+        default=None,
+        type=float,
+        help="The temperature for llm generation.",
+    )
+    parser.add_argument(
+        "--top_p", default=None, type=float, help="The top_p for llm generation."
+    )
+    parser.add_argument(
+        "--reflection", action="store_true", default=False, help="Enable reflection"
+    )
     # data selection
-    parser.add_argument("--split", type=str, default="validation", choices=['validation','test'])
-    parser.add_argument("--level", type=str, default="all", choices=["all", "1", "2", "3"])
-    parser.add_argument("--selected-tasks", default=None, nargs='*', help="Tasks to run: specify single or multiple indices (--selected-tasks 1 or --selected-tasks 1 2 5), a single task ID, or a path to a text file with one task ID per line")
+    parser.add_argument(
+        "--split", type=str, default="validation", choices=["validation", "test"]
+    )
+    parser.add_argument(
+        "--level", type=str, default="all", choices=["all", "1", "2", "3"]
+    )
+    parser.add_argument(
+        "--selected-tasks",
+        default=None,
+        nargs="*",
+        help="Tasks to run: specify single or multiple indices (--selected-tasks 1 or --selected-tasks 1 2 5), a single task ID, or a path to a text file with one task ID per line",
+    )
     # search params
-    parser.add_argument('--search_tool_reflection', action='store_true', default=False, help='Enable search tool reflection')
+    parser.add_argument(
+        "--search_tool_reflection",
+        action="store_true",
+        default=False,
+        help="Enable search tool reflection",
+    )
     # plan params
-    parser.add_argument('--subtask', action='store_true', default=False, help='Enable subtask')
-    parser.add_argument('--static_plan', action='store_true', default=False, help='Use static plan')
-    parser.add_argument('--dynamic_update_plan', action='store_true', default=False, help='Use dynamic update plan')
+    parser.add_argument(
+        "--subtask", action="store_true", default=False, help="Enable subtask"
+    )
+    parser.add_argument(
+        "--static_plan", action="store_true", default=False, help="Use static plan"
+    )
+    parser.add_argument(
+        "--dynamic_update_plan",
+        action="store_true",
+        default=False,
+        help="Use dynamic update plan",
+    )
     # memory params
-    parser.add_argument('--summary', action='store_true', default=False, help='Summarize the current step memory')
-    parser.add_argument('--use_long_term_memory', action='store_true', default=False, help='Use long-term memory')
-    parser.add_argument('--retrieve_key_memory', action='store_true', default=False, help='Retrieve key memory')
-    
+    parser.add_argument(
+        "--summary",
+        action="store_true",
+        default=False,
+        help="Summarize the current step memory",
+    )
+    parser.add_argument(
+        "--use_long_term_memory",
+        action="store_true",
+        default=False,
+        help="Use long-term memory",
+    )
+    parser.add_argument(
+        "--retrieve_key_memory",
+        action="store_true",
+        default=False,
+        help="Retrieve key memory",
+    )
+
     return parser.parse_args()
 
+
 def load_gaia_dataset(args):
-    eval_ds = datasets.load_dataset("gaia-benchmark/GAIA", "2023_all", trust_remote_code=True)[args.split]
-    eval_ds = eval_ds.rename_columns({"Question": "question", "Final answer": "true_answer", "Level": "task"})
+    eval_ds = datasets.load_dataset(
+        "gaia-benchmark/GAIA", "2023_all", trust_remote_code=True
+    )[args.split]
+    eval_ds = eval_ds.rename_columns(
+        {"Question": "question", "Final answer": "true_answer", "Level": "task"}
+    )
 
     def preprocess_file_paths(row):
         if len(row["file_name"]) > 0:
@@ -143,13 +209,17 @@ def load_gaia_dataset(args):
     eval_df = pd.DataFrame(eval_ds)
     return eval_df
 
+
 def create_agent_hierarchy(model: Model, model_search: Model, args, debug=False):
     crawler = SimpleCrawler(serpapi_key=os.getenv("SERP_API_KEY"))
     text_limit = 100000
 
-    search_types = ['wiki', 'google', 'baidu', 'bing', 'duckduckgo']
-    search_tools = [SearchTool(search_type=st, reflection=args.search_tool_reflection) for st in search_types]
-    
+    search_types = ["wiki", "google", "baidu", "bing", "duckduckgo"]
+    search_tools = [
+        SearchTool(search_type=st, reflection=args.search_tool_reflection)
+        for st in search_types
+    ]
+
     WEB_TOOLS = [
         CrawlerReadTool(crawler),
         CrawlerArchiveSearchTool(crawler),
@@ -172,16 +242,22 @@ def create_agent_hierarchy(model: Model, model_search: Model, args, debug=False)
     """,
         provide_run_summary=True,
         debug=debug,
-        static_plan=args.static_plan, 
+        static_plan=args.static_plan,
         dynamic_update_plan=args.dynamic_update_plan,
         reflection=args.reflection,
     )
-    text_webbrowser_agent.prompt_templates["managed_agent"]["task"] += """You can navigate to .txt online files.
+    text_webbrowser_agent.prompt_templates["managed_agent"][
+        "task"
+    ] += """You can navigate to .txt online files.
     If a non-html page is in another format, especially .pdf or a Youtube video, use tool 'inspect_file_as_text' to inspect it.
     Additionally, if after some searching you find out that you need more information to answer the question, you can use `final_answer` with your request for clarification as argument to request for more information."""
     manager_agent = CodeAgent(
         model=model,
-        tools=[VisualInspectorTool(model, text_limit), AudioInspectorTool(model, text_limit), TextInspectorTool(model, text_limit)],
+        tools=[
+            VisualInspectorTool(model, text_limit),
+            AudioInspectorTool(model, text_limit),
+            TextInspectorTool(model, text_limit),
+        ],
         max_steps=args.max_steps,
         verbosity_level=2,
         additional_authorized_imports=AUTHORIZED_IMPORTS,
@@ -198,6 +274,7 @@ def create_agent_hierarchy(model: Model, model_search: Model, args, debug=False)
     )
     return manager_agent
 
+
 def append_answer(entry: dict, jsonl_file: str, file_lock) -> None:
     jsonl_file = Path(jsonl_file)
     jsonl_file.parent.mkdir(parents=True, exist_ok=True)
@@ -208,6 +285,7 @@ def append_answer(entry: dict, jsonl_file: str, file_lock) -> None:
     assert os.path.exists(jsonl_file), "File not found!"
     logger.info("Answer exported to file: {}".format(jsonl_file.resolve()))
 
+
 def extract_intermediate_steps(agent):
 
     intermediate_steps = []
@@ -215,24 +293,29 @@ def extract_intermediate_steps(agent):
         memory_step.model_input_messages = None
         step_dict = memory_step.dict()
         if isinstance(memory_step, ActionStep):
-            step_dict['step_type'] = 'action'
-            step_dict.pop('model_output_message', None)
+            step_dict["step_type"] = "action"
+            step_dict.pop("model_output_message", None)
         elif isinstance(memory_step, TaskStep):
-            step_dict['step_type'] = 'task'
+            step_dict["step_type"] = "task"
         elif isinstance(memory_step, PlanningStep):
-            step_dict['step_type'] = 'planning'
-            step_dict.pop('model_output_message_facts', None)
-            step_dict.pop('model_output_message_plan', None)
+            step_dict["step_type"] = "planning"
+            step_dict.pop("model_output_message_facts", None)
+            step_dict.pop("model_output_message_plan", None)
         else:
-            step_dict['step_type'] = 'unknown'
+            step_dict["step_type"] = "unknown"
         intermediate_steps.append(step_dict)
     return intermediate_steps
 
-def answer_single_question(example, args, model_id, model_id_search, answers_file, debug=False, retrieval=False):
+
+def answer_single_question(
+    example, args, model_id, model_id_search, answers_file, debug=False, retrieval=False
+):
 
     text_limit = 100000
     model_name, key, url, model_wrapper = get_api_model(model_id)
-    model_name_search, key_search, url_search, model_wrapper_search = get_api_model(model_id_search)
+    model_name_search, key_search, url_search, model_wrapper_search = get_api_model(
+        model_id_search
+    )
 
     kwargs = prepare_model_kwargs(model_id, args)
     kwargs_search = prepare_model_kwargs(model_id_search, args)
@@ -243,7 +326,7 @@ def answer_single_question(example, args, model_id, model_id_search, answers_fil
         max_completion_tokens=8192,
         api_key=key,
         api_base=url,
-        **kwargs
+        **kwargs,
     )
 
     model_search = model_wrapper_search(
@@ -252,7 +335,7 @@ def answer_single_question(example, args, model_id, model_id_search, answers_fil
         max_completion_tokens=8192,
         api_key=key_search,
         api_base=url_search,
-        **kwargs_search
+        **kwargs_search,
     )
 
     document_inspection_tool = TextInspectorTool(model, text_limit)
@@ -261,23 +344,36 @@ def answer_single_question(example, args, model_id, model_id_search, answers_fil
 
     agent = create_agent_hierarchy(model, model_search, args, debug)
 
-    augmented_question = """You have one question to answer. It is paramount that you provide a correct answer.
+    augmented_question = (
+        """You have one question to answer. It is paramount that you provide a correct answer.
 Give it all you can: I know for a fact that you have access to all the relevant tools to solve it and find the correct answer (the answer does exist). 
 Failure or 'I cannot answer' or 'None found' will not be tolerated, success will be rewarded.
 Run verification steps if that's needed, you must make sure you find the correct answer!
 Here is the task:
-""" + example["question"]
+"""
+        + example["question"]
+    )
 
     if example["file_name"]:
         if ".zip" in example["file_name"]:
             prompt_use_files = "\n\nTo solve the task above, you will have to use these attached files:\n"
             prompt_use_files += get_zip_description(
-                example["file_name"], example["question"], visual_inspection_tool, document_inspection_tool, audio_inspection_tool,
+                example["file_name"],
+                example["question"],
+                visual_inspection_tool,
+                document_inspection_tool,
+                audio_inspection_tool,
             )
         else:
-            prompt_use_files = "\n\nTo solve the task above, you will have to use this attached file:"
+            prompt_use_files = (
+                "\n\nTo solve the task above, you will have to use this attached file:"
+            )
             prompt_use_files += get_single_file_description(
-                example["file_name"], example["question"], visual_inspection_tool, document_inspection_tool, audio_inspection_tool,
+                example["file_name"],
+                example["question"],
+                visual_inspection_tool,
+                document_inspection_tool,
+                audio_inspection_tool,
             )
         augmented_question += prompt_use_files
 
@@ -285,15 +381,25 @@ Here is the task:
     try:
         final_result = agent.run(augmented_question)
         agent_memory = agent.write_memory_to_messages(summary_mode=True)
-        final_result = prepare_response(augmented_question, agent_memory, reformulation_model=model)
+        final_result = prepare_response(
+            augmented_question, agent_memory, reformulation_model=model
+        )
         output = str(final_result)
 
         intermediate_steps = extract_intermediate_steps(agent)
-        
+
         intermediate_steps_check = [str(step) for step in agent.memory.steps]
-        parsing_error = True if any(["AgentParsingError" in step for step in intermediate_steps_check]) else False
-        
-        iteration_limit_exceeded = True if "Agent stopped due to iteration limit or time limit." in output else False
+        parsing_error = (
+            True
+            if any(["AgentParsingError" in step for step in intermediate_steps_check])
+            else False
+        )
+
+        iteration_limit_exceeded = (
+            True
+            if "Agent stopped due to iteration limit or time limit." in output
+            else False
+        )
         raised_exception = False
 
     except Exception as e:
@@ -304,7 +410,7 @@ Here is the task:
         iteration_limit_exceeded = False
         exception = e
         raised_exception = True
-        
+
     end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     annotated_example = {
         "agent_name": model.model_id,
@@ -320,12 +426,14 @@ Here is the task:
         "end_time": end_time,
         "task": example["task"],
         "task_id": example["task_id"],
-        "search_agent_actions": agent.managed_agents['search_agent'].task_records,
+        "search_agent_actions": agent.managed_agents["search_agent"].task_records,
     }
     append_answer(annotated_example, answers_file, jsonl_lock)
 
 
-def get_examples_to_answer(answers_file, eval_df, selected_tasks=None, level='all', debug=False) -> List[dict]:
+def get_examples_to_answer(
+    answers_file, eval_df, selected_tasks=None, level="all", debug=False
+) -> List[dict]:
     logger.info(f"Loading answers from {answers_file}...")
     try:
         answer_df = pd.read_json(answers_file, lines=True)
@@ -336,20 +444,25 @@ def get_examples_to_answer(answers_file, eval_df, selected_tasks=None, level='al
         logger.info("No usable records! ▶️ Starting new.")
         done_questions = []
 
-    if level == 'all':
+    if level == "all":
         filtered_df = eval_df
     else:
-        filtered_df = eval_df[eval_df['task'] == level]
+        filtered_df = eval_df[eval_df["task"] == level]
 
     if selected_tasks:
         if isinstance(selected_tasks[0], int):
             filtered_df = eval_df.iloc[selected_tasks]
         else:
-            filtered_df = eval_df[eval_df['task_id'].isin(selected_tasks)]
-    
+            filtered_df = eval_df[eval_df["task_id"].isin(selected_tasks)]
+
     if debug:
         done_questions = []
-    return [row.to_dict() for idx, row in filtered_df.iterrows() if row["task_id"] not in done_questions]
+    return [
+        row.to_dict()
+        for idx, row in filtered_df.iterrows()
+        if row["task_id"] not in done_questions
+    ]
+
 
 def main():
     args = parse_args()
@@ -360,18 +473,37 @@ def main():
 
     selected_tasks = process_selected_tasks_param(args.selected_tasks)
     level = args.level
-    tasks_to_run = get_examples_to_answer(answers_file, eval_df, selected_tasks, level, args.debug)
+    tasks_to_run = get_examples_to_answer(
+        answers_file, eval_df, selected_tasks, level, args.debug
+    )
 
     if args.debug or args.concurrency == 1:
         for example in tasks_to_run:
-            answer_single_question(example, args, args.model_id, args.model_id_search, answers_file, args.debug)
+            answer_single_question(
+                example,
+                args,
+                args.model_id,
+                args.model_id_search,
+                answers_file,
+                args.debug,
+            )
     else:
         with ThreadPoolExecutor(max_workers=args.concurrency) as exe:
             futures = [
-                exe.submit(answer_single_question, example, args, args.model_id, args.model_id_search, answers_file, args.debug)
+                exe.submit(
+                    answer_single_question,
+                    example,
+                    args,
+                    args.model_id,
+                    args.model_id_search,
+                    answers_file,
+                    args.debug,
+                )
                 for example in tasks_to_run
             ]
-            for f in tqdm(as_completed(futures), total=len(tasks_to_run), desc="Processing tasks"):
+            for f in tqdm(
+                as_completed(futures), total=len(tasks_to_run), desc="Processing tasks"
+            ):
                 try:
                     f.result()
                 except Exception as e:

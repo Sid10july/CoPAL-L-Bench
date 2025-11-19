@@ -41,7 +41,9 @@ for row in rows:
 inspector = inspect(engine)
 columns_info = [(col["name"], col["type"]) for col in inspector.get_columns("receipts")]
 
-table_description = "Columns:\n" + "\n".join([f"  - {name}: {col_type}" for name, col_type in columns_info])
+table_description = "Columns:\n" + "\n".join(
+    [f"  - {name}: {col_type}" for name, col_type in columns_info]
+)
 print(table_description)
 
 from smolagents import tool

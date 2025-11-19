@@ -83,7 +83,7 @@ class Neo4jGraph(BaseGraphStorage):
             than `LIST_LIMIT` elements from results. Defaults to `False`.
     """
 
-    @dependencies_required('neo4j')
+    @dependencies_required("neo4j")
     def __init__(
         self,
         url: str,
@@ -100,9 +100,7 @@ class Neo4jGraph(BaseGraphStorage):
         username = os.environ.get("NEO4J_USERNAME") or username
         password = os.environ.get("NEO4J_PASSWORD") or password
 
-        self.driver = neo4j.GraphDatabase.driver(
-            url, auth=(username, password)
-        )
+        self.driver = neo4j.GraphDatabase.driver(url, auth=(username, password))
         self.database = database
         self.timeout = timeout
         self.truncate = truncate
@@ -234,17 +232,13 @@ class Neo4jGraph(BaseGraphStorage):
 
         with self.driver.session(database=self.database) as session:
             try:
-                data = session.run(
-                    Query(text=query, timeout=self.timeout), params
-                )
+                data = session.run(Query(text=query, timeout=self.timeout), params)
                 json_data = [r.data() for r in data]
                 if self.truncate:
                     json_data = [self._value_truncate(el) for el in json_data]
                 return json_data
             except CypherSyntaxError as e:
-                raise ValueError(
-                    f"Generated Cypher Statement is not valid\n{e}"
-                )
+                raise ValueError(f"Generated Cypher Statement is not valid\n{e}")
 
     def refresh_schema(self) -> None:
         r"""Refreshes the Neo4j graph schema information by querying the
@@ -258,9 +252,7 @@ class Neo4jGraph(BaseGraphStorage):
             el["output"]
             for el in self.query(
                 NODE_PROPERTY_QUERY,
-                params={
-                    "EXCLUDED_LABELS": [*EXCLUDED_LABELS, BASE_ENTITY_LABEL]
-                },
+                params={"EXCLUDED_LABELS": [*EXCLUDED_LABELS, BASE_ENTITY_LABEL]},
             )
         ]
         rel_properties = [
@@ -273,9 +265,7 @@ class Neo4jGraph(BaseGraphStorage):
             el["output"]
             for el in self.query(
                 REL_QUERY,
-                params={
-                    "EXCLUDED_LABELS": [*EXCLUDED_LABELS, BASE_ENTITY_LABEL]
-                },
+                params={"EXCLUDED_LABELS": [*EXCLUDED_LABELS, BASE_ENTITY_LABEL]},
             )
         ]
 
@@ -290,12 +280,8 @@ class Neo4jGraph(BaseGraphStorage):
             index = []
 
         self.structured_schema = {
-            "node_props": {
-                el["labels"]: el["properties"] for el in node_properties
-            },
-            "rel_props": {
-                el["type"]: el["properties"] for el in rel_properties
-            },
+            "node_props": {el["labels"]: el["properties"] for el in node_properties},
+            "rel_props": {el["type"]: el["properties"] for el in rel_properties},
             "relationships": relationships,
             "metadata": {"constraint": constraint, "index": index},
         }
@@ -304,10 +290,7 @@ class Neo4jGraph(BaseGraphStorage):
         formatted_node_props = []
         for el in node_properties:
             props_str = ", ".join(
-                [
-                    f"{prop['property']}: {prop['type']}"
-                    for prop in el["properties"]
-                ]
+                [f"{prop['property']}: {prop['type']}" for prop in el["properties"]]
             )
             formatted_node_props.append(f"{el['labels']} {{{props_str}}}")
 
@@ -315,17 +298,13 @@ class Neo4jGraph(BaseGraphStorage):
         formatted_rel_props = []
         for el in rel_properties:
             props_str = ", ".join(
-                [
-                    f"{prop['property']}: {prop['type']}"
-                    for prop in el["properties"]
-                ]
+                [f"{prop['property']}: {prop['type']}" for prop in el["properties"]]
             )
             formatted_rel_props.append(f"{el['type']} {{{props_str}}}")
 
         # Format relationships
         formatted_rels = [
-            f"(:{el['start']})-[:{el['type']}]->(:{el['end']})"
-            for el in relationships
+            f"(:{el['start']})-[:{el['type']}]->(:{el['end']})" for el in relationships
         ]
 
         self.schema = "\n".join(
@@ -449,7 +428,7 @@ class Neo4jGraph(BaseGraphStorage):
         Returns:
             str: A Cypher query string tailored based on the provided flags.
         """
-        REL = 'MERGE (d)-[:MENTIONS]->(source) ' if include_source else ''
+        REL = "MERGE (d)-[:MENTIONS]->(source) " if include_source else ""
         if base_entity_label:
             return (
                 f"{INCLUDE_DOCS_QUERY if include_source else ''}"
@@ -553,8 +532,8 @@ class Neo4jGraph(BaseGraphStorage):
         )
         rel_import_query = self._get_rel_import_query(base_entity_label)
         for element in graph_elements:
-            if not element.source.to_dict()['element_id']:
-                element.source.to_dict()['element_id'] = md5(
+            if not element.source.to_dict()["element_id"]:
+                element.source.to_dict()["element_id"] = md5(
                     str(element).encode("utf-8")
                 ).hexdigest()
 

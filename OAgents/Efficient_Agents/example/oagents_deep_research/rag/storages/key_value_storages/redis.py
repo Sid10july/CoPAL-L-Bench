@@ -98,9 +98,7 @@ class RedisStorage(BaseKeyValueStorage):
         """
         return self._client
 
-    def save(
-        self, records: List[Dict[str, Any]], expire: Optional[int] = None
-    ) -> None:
+    def save(self, records: List[Dict[str, Any]], expire: Optional[int] = None) -> None:
         r"""Saves a batch of records to the key-value storage system."""
         try:
             self._run_async(self._async_save(records, expire))

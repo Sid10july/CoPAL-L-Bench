@@ -45,7 +45,7 @@ from rag.types import TaskType
 
 from .constants import Constants
 
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
 logger = get_logger(__name__)
 
@@ -67,13 +67,13 @@ def print_text_animated(
     """
     if logger.isEnabledFor(log_level):
         # timestamp and other prefixes
-        logger.log(log_level, '')
+        logger.log(log_level, "")
 
         for char in text:
             print(char, end=end, flush=True)
             time.sleep(delay)
         # Close the log entry
-        logger.log(log_level, '')
+        logger.log(log_level, "")
     else:
         # This may be relevant for logging frameworks
         logger.log(log_level, text)
@@ -93,7 +93,7 @@ def get_prompt_template_key_words(template: str) -> Set[str]:
         >>> get_prompt_template_key_words('Hi, {name}! How are you {status}?')
         {'name', 'status'}
     """
-    return set(re.findall(r'{([^}]*)}', template))
+    return set(re.findall(r"{([^}]*)}", template))
 
 
 def get_first_int(string: str) -> Optional[int]:
@@ -108,7 +108,7 @@ def get_first_int(string: str) -> Optional[int]:
         int or None: The first integer number found in the string, or None if
             no integer number is found.
     """
-    match = re.search(r'\d+', string)
+    match = re.search(r"\d+", string)
     if match:
         return int(match.group())
     else:
@@ -159,13 +159,13 @@ def get_task_list(task_response: str) -> List[str]:
     """
 
     new_tasks_list = []
-    task_string_list = task_response.strip().split('\n')
+    task_string_list = task_response.strip().split("\n")
     # each task starts with #.
     for task_string in task_string_list:
         task_parts = task_string.strip().split(".", 1)
         if len(task_parts) == 2:
-            task_id = ''.join(s for s in task_parts[0] if s.isnumeric())
-            task_name = re.sub(r'[^\w\s_]+', '', task_parts[1]).strip()
+            task_id = "".join(s for s in task_parts[0] if s.isnumeric())
+            task_name = re.sub(r"[^\w\s_]+", "", task_parts[1]).strip()
             if task_name.strip() and task_id.isnumeric():
                 new_tasks_list.append(task_name)
     return new_tasks_list
@@ -275,11 +275,9 @@ def api_keys_required(*required_keys: str) -> Callable[[F], F]:
     def decorator(func: F) -> F:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            missing_environment_keys = [
-                k for k in required_keys if k not in os.environ
-            ]
+            missing_environment_keys = [k for k in required_keys if k not in os.environ]
             if (
-                not (args and getattr(args[0], '_api_key', None))
+                not (args and getattr(args[0], "_api_key", None))
                 and missing_environment_keys
             ):
                 raise ValueError(
@@ -321,15 +319,15 @@ def to_pascal(snake: str) -> str:
         str: The converted PascalCase string.
     """
     # Check if the string is already in PascalCase
-    if re.match(r'^[A-Z][a-zA-Z0-9]*([A-Z][a-zA-Z0-9]*)*$', snake):
+    if re.match(r"^[A-Z][a-zA-Z0-9]*([A-Z][a-zA-Z0-9]*)*$", snake):
         return snake
     # Remove leading and trailing underscores
-    snake = snake.strip('_')
+    snake = snake.strip("_")
     # Replace multiple underscores with a single one
-    snake = re.sub('_+', '_', snake)
+    snake = re.sub("_+", "_", snake)
     # Convert to PascalCase
     return re.sub(
-        '_([0-9A-Za-z])',
+        "_([0-9A-Za-z])",
         lambda m: m.group(1).upper(),
         snake.title(),
     )
@@ -386,33 +384,29 @@ def json_to_function_code(json_obj: Dict) -> str:
     Returns:
         str: The generated Python function code as a string.
     """
-    properties = json_obj.get('properties', {})
-    required = json_obj.get('required', [])
+    properties = json_obj.get("properties", {})
+    required = json_obj.get("required", [])
 
     if not properties or not required:
-        raise ValueError(
-            "JSON schema must contain 'properties' and 'required' fields"
-        )
+        raise ValueError("JSON schema must contain 'properties' and 'required' fields")
 
     args = []
     docstring_args = []
     return_keys = []
 
     prop_to_python = {
-        'string': 'str',
-        'number': 'float',
-        'integer': 'int',
-        'boolean': 'bool',
+        "string": "str",
+        "number": "float",
+        "integer": "int",
+        "boolean": "bool",
     }
 
     for prop in required:
-        description = properties[prop]['description']
-        prop_type = properties[prop]['type']
+        description = properties[prop]["description"]
+        prop_type = properties[prop]["type"]
         python_type = prop_to_python.get(prop_type, prop_type)
         args.append(f"{prop}: {python_type}")
-        docstring_args.append(
-            f"        {prop} ({python_type}): {description}."
-        )
+        docstring_args.append(f"        {prop} ({python_type}): {description}.")
         return_keys.append(prop)
 
     # extract entity of schema
@@ -562,7 +556,7 @@ class AgentOpsMeta(type):
     def __new__(cls, name, bases, dct):
         if ToolEvent:
             for attr, value in dct.items():
-                if callable(value) and attr != 'get_tools':
+                if callable(value) and attr != "get_tools":
                     dct[attr] = agentops_decorator(value)
         return super().__new__(cls, name, bases, dct)
 

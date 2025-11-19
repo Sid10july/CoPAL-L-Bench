@@ -40,9 +40,7 @@ class ShareGPTMessage(BaseModel):
         "populate_by_name": True,
         "extra": "forbid",
         "json_schema_extra": {
-            "examples": [
-                {"from": "human", "value": "What's the weather like today?"}
-            ]
+            "examples": [{"from": "human", "value": "What's the weather like today?"}]
         },
     }
 
@@ -52,8 +50,8 @@ class ShareGPTConversation(RootModel):
 
     root: List[ShareGPTMessage]
 
-    @model_validator(mode='after')
-    def validate_conversation_flow(self) -> 'ShareGPTConversation':
+    @model_validator(mode="after")
+    def validate_conversation_flow(self) -> "ShareGPTConversation":
         r"""Validate the conversation follows logical message order"""
         messages = self.root
 
@@ -102,11 +100,9 @@ class ToolCall(BaseModel):
         max_length=256,
         description="The name of the tool to call",
     )
-    arguments: Dict[str, Any] = Field(
-        description="The arguments to pass to the tool"
-    )
+    arguments: Dict[str, Any] = Field(description="The arguments to pass to the tool")
 
-    @field_validator('arguments')
+    @field_validator("arguments")
     @classmethod
     def validate_arguments(cls, v: Dict[str, Any]) -> Dict[str, Any]:
         r"""Validate argument structure and content"""
@@ -148,7 +144,7 @@ class ToolResponse(BaseModel):
         " Must be JSON serializable literal or object"
     )
 
-    @field_validator('content')
+    @field_validator("content")
     @classmethod
     def validate_content(cls, v: Dict[str, Any]) -> Dict[str, Any]:
         r"""Validate response content structure"""

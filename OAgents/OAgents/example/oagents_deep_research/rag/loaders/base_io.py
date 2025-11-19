@@ -128,8 +128,7 @@ class File(ABC):
 
     def __str__(self) -> str:
         return (
-            f"File(name={self.name}, id={self.file_id}, metadata="
-            f"{self.metadata})"
+            f"File(name={self.name}, id={self.file_id}, metadata=" f"{self.metadata})"
         )
 
     def copy(self) -> "File":
@@ -158,7 +157,7 @@ def strip_consecutive_newlines(text: str) -> str:
 
 class DocxFile(File):
     @classmethod
-    @dependencies_required('docx2txt')
+    @dependencies_required("docx2txt")
     def from_bytes(cls, file: BytesIO, filename: str) -> "DocxFile":
         r"""Creates a DocxFile object from a BytesIO object.
 

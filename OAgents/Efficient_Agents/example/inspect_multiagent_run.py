@@ -15,7 +15,9 @@ from smolagents import (
 # Let's setup the instrumentation first
 
 trace_provider = TracerProvider()
-trace_provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter("http://0.0.0.0:6006/v1/traces")))
+trace_provider.add_span_processor(
+    SimpleSpanProcessor(OTLPSpanExporter("http://0.0.0.0:6006/v1/traces"))
+)
 
 SmolagentsInstrumentor().instrument(tracer_provider=trace_provider, skip_dep_check=True)
 
@@ -34,4 +36,6 @@ manager_agent = CodeAgent(
     model=model,
     managed_agents=[search_agent],
 )
-manager_agent.run("If the US keeps it 2024 growth rate, how many years would it take for the GDP to double?")
+manager_agent.run(
+    "If the US keeps it 2024 growth rate, how many years would it take for the GDP to double?"
+)

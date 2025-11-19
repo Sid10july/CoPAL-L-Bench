@@ -52,9 +52,7 @@ def get_pydantic_model(
             f"{input_data.__name__.capitalize()}Model",
             **{
                 name: (param.annotation, ...)
-                for name, param in inspect.signature(
-                    input_data
-                ).parameters.items()
+                for name, param in inspect.signature(input_data).parameters.items()
             },
         )
         return WrapperClass

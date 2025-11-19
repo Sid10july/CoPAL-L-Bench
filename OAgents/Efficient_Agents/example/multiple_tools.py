@@ -38,7 +38,9 @@ def get_weather(location: str, celsius: Optional[bool] = False) -> str:
         data = response.json()
 
         if data.get("error"):  # Check if there's an error in the response
-            return f"Error: {data['error'].get('info', 'Unable to fetch weather data.')}"
+            return (
+                f"Error: {data['error'].get('info', 'Unable to fetch weather data.')}"
+            )
 
         weather = data["current"]["weather_descriptions"][0]
         temp = data["current"]["temperature"]
@@ -97,7 +99,9 @@ def get_news_headlines() -> str:
     Returns:
         str: A string containing the top 5 news headlines and their sources, or an error message.
     """
-    api_key = "your_api_key"  # Replace with your actual API key from https://newsapi.org/
+    api_key = (
+        "your_api_key"  # Replace with your actual API key from https://newsapi.org/
+    )
     url = f"https://newsapi.org/v2/top-headlines?country=us&apiKey={api_key}"
 
     try:
@@ -110,7 +114,10 @@ def get_news_headlines() -> str:
         if not articles:
             return "No news available at the moment."
 
-        headlines = [f"{article['title']} - {article['source']['name']}" for article in articles[:5]]
+        headlines = [
+            f"{article['title']} - {article['source']['name']}"
+            for article in articles[:5]
+        ]
         return "\n".join(headlines)
 
     except requests.exceptions.RequestException as e:

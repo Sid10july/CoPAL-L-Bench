@@ -32,8 +32,7 @@ def _query_unimplemented(self, *input: Any) -> None:
         registered hooks while the latter silently ignores them.
     """
     raise NotImplementedError(
-        f"Retriever [{type(self).__name__}] is missing the required"
-        " \"query\" function"
+        f"Retriever [{type(self).__name__}] is missing the required" ' "query" function'
     )
 
 
@@ -54,7 +53,7 @@ def _process_unimplemented(self, *input: Any) -> None:
     """
     raise NotImplementedError(
         f"Retriever [{type(self).__name__}] is missing the required "
-        "\"process\" function"
+        '"process" function'
     )
 
 

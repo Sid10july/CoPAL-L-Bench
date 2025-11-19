@@ -36,7 +36,10 @@ class Monitor:
         self.step_durations = []
         self.tracked_model = tracked_model
         self.logger = logger
-        if getattr(self.tracked_model, "last_input_token_count", "Not found") != "Not found":
+        if (
+            getattr(self.tracked_model, "last_input_token_count", "Not found")
+            != "Not found"
+        ):
             self.total_input_token_count = 0
             self.total_output_token_count = 0
 
@@ -64,9 +67,7 @@ class Monitor:
         if getattr(self.tracked_model, "last_input_token_count", None) is not None:
             self.total_input_token_count += self.tracked_model.last_input_token_count
             self.total_output_token_count += self.tracked_model.last_output_token_count
-            console_outputs += (
-                f"| Input tokens: {self.total_input_token_count:,} | Output tokens: {self.total_output_token_count:,}"
-            )
+            console_outputs += f"| Input tokens: {self.total_input_token_count:,} | Output tokens: {self.total_output_token_count:,}"
         console_outputs += "]"
         self.logger.log(Text(console_outputs, style="dim"), level=1)
 
@@ -97,7 +98,13 @@ class AgentLogger:
         if level <= self.level:
             self.console.print(*args, **kwargs)
 
-    def log_markdown(self, content: str, title: Optional[str] = None, level=LogLevel.INFO, style=YELLOW_HEX) -> None:
+    def log_markdown(
+        self,
+        content: str,
+        title: Optional[str] = None,
+        level=LogLevel.INFO,
+        style=YELLOW_HEX,
+    ) -> None:
         markdown_content = Syntax(
             content,
             lexer="markdown",
@@ -145,7 +152,13 @@ class AgentLogger:
             level=LogLevel.INFO,
         )
 
-    def log_task(self, content: str, subtitle: str, title: Optional[str] = None, level: int = LogLevel.INFO) -> None:
+    def log_task(
+        self,
+        content: str,
+        subtitle: str,
+        title: Optional[str] = None,
+        level: int = LogLevel.INFO,
+    ) -> None:
         self.log(
             Panel(
                 f"\n[bold]{content}\n",
@@ -158,7 +171,9 @@ class AgentLogger:
         )
 
     def log_messages(self, messages: List) -> None:
-        messages_as_string = "\n".join([json.dumps(dict(message), indent=4) for message in messages])
+        messages_as_string = "\n".join(
+            [json.dumps(dict(message), indent=4) for message in messages]
+        )
         self.log(
             Syntax(
                 messages_as_string,
@@ -180,7 +195,9 @@ class AgentLogger:
                     f"{arg_name} (`{info.get('type', 'Any')}`{', optional' if info.get('optional') else ''}): {info.get('description', '')}"
                     for arg_name, info in getattr(tool, "inputs", {}).items()
                 ]
-                table.add_row(name, getattr(tool, "description", str(tool)), "\n".join(args))
+                table.add_row(
+                    name, getattr(tool, "description", str(tool)), "\n".join(args)
+                )
 
             return Group("🛠️ [italic #1E90FF]Tools:[/italic #1E90FF]", table)
 
@@ -195,12 +212,16 @@ class AgentLogger:
             if agent_obj.managed_agents:
                 agents_branch = parent_tree.add("🤖 [italic #1E90FF]Managed agents:")
                 for name, managed_agent in agent_obj.managed_agents.items():
-                    agent_tree = agents_branch.add(get_agent_headline(managed_agent, name))
+                    agent_tree = agents_branch.add(
+                        get_agent_headline(managed_agent, name)
+                    )
                     if managed_agent.__class__.__name__ == "CodeAgent":
                         agent_tree.add(
                             f"✅ [italic #1E90FF]Authorized imports:[/italic #1E90FF] {managed_agent.additional_authorized_imports}"
                         )
-                    agent_tree.add(f"📝 [italic #1E90FF]Description:[/italic #1E90FF] {managed_agent.description}")
+                    agent_tree.add(
+                        f"📝 [italic #1E90FF]Description:[/italic #1E90FF] {managed_agent.description}"
+                    )
                     build_agent_tree(agent_tree, managed_agent)
 
         main_tree = Tree(get_agent_headline(agent))

@@ -41,9 +41,7 @@ class OpenAIEmbedding(BaseEmbedding[str]):
 
     def __init__(
         self,
-        model_type: EmbeddingModelType = (
-            EmbeddingModelType.TEXT_EMBEDDING_3_SMALL
-        ),
+        model_type: EmbeddingModelType = (EmbeddingModelType.TEXT_EMBEDDING_3_SMALL),
         api_key: str | None = None,
         dimensions: int | NotGiven = NOT_GIVEN,
     ) -> None:
@@ -59,7 +57,9 @@ class OpenAIEmbedding(BaseEmbedding[str]):
         self._api_key = os.getenv("OPENAI_API_KEY")
         self._base_url = os.getenv("OPENAI_BASE_URL")
 
-        self.client = OpenAI(timeout=60, max_retries=3, api_key=self._api_key, base_url=self._base_url)
+        self.client = OpenAI(
+            timeout=60, max_retries=3, api_key=self._api_key, base_url=self._base_url
+        )
 
     @api_keys_required("OPENAI_API_KEY")
     def embed_list(

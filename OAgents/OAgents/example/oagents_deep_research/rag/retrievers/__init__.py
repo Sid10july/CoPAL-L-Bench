@@ -19,10 +19,10 @@ from .vector_retriever import VectorRetriever
 from .simple_vector_retriever import SimpleVectorRetriever
 
 __all__ = [
-    'BaseRetriever',
-    'VectorRetriever',
-    'AutoRetriever',
-    'BM25Retriever',
-    'CohereRerankRetriever',
+    "BaseRetriever",
+    "VectorRetriever",
+    "AutoRetriever",
+    "BM25Retriever",
+    "CohereRerankRetriever",
     "SimpleVectorRetriever",
 ]

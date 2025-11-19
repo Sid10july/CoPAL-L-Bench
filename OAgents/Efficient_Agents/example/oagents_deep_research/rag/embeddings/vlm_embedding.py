@@ -32,9 +32,7 @@ class VisionLanguageEmbedding(BaseEmbedding[Union[str, Image.Image]]):
         RuntimeError: If an unsupported model type is specified.
     """
 
-    def __init__(
-        self, model_name: str = "openai/clip-vit-base-patch32"
-    ) -> None:
+    def __init__(self, model_name: str = "openai/clip-vit-base-patch32") -> None:
         r"""Initializes the: obj: `VisionLanguageEmbedding` class with a
         specified model and return the dimension of embeddings.
 
@@ -91,10 +89,10 @@ class VisionLanguageEmbedding(BaseEmbedding[Union[str, Image.Image]]):
             raise ValueError("Input objs list is empty.")
 
         image_processor_kwargs: Optional[dict] = kwargs.get(
-            'image_processor_kwargs', {}
+            "image_processor_kwargs", {}
         )
-        tokenizer_kwargs: Optional[dict] = kwargs.get('tokenizer_kwargs', {})
-        model_kwargs: Optional[dict] = kwargs.get('model_kwargs', {})
+        tokenizer_kwargs: Optional[dict] = kwargs.get("tokenizer_kwargs", {})
+        model_kwargs: Optional[dict] = kwargs.get("model_kwargs", {})
 
         result_list = []
         for obj in objs:
@@ -106,9 +104,7 @@ class VisionLanguageEmbedding(BaseEmbedding[Union[str, Image.Image]]):
                     **image_processor_kwargs,
                 )
                 image_feature = (
-                    self.model.get_image_features(
-                        **image_input, **model_kwargs
-                    )
+                    self.model.get_image_features(**image_input, **model_kwargs)
                     .squeeze(dim=0)
                     .tolist()
                 )
@@ -143,7 +139,7 @@ class VisionLanguageEmbedding(BaseEmbedding[Union[str, Image.Image]]):
             int: The dimensionality of the embedding for the current model.
         """
         if self.dim is None:
-            text = 'dimension'
+            text = "dimension"
             inputs = self.processor(text=[text], return_tensors="pt")
             self.dim = self.model.get_text_features(**inputs).shape[1]
         return self.dim

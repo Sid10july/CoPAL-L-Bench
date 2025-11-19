@@ -28,12 +28,28 @@ import time
 from collections import deque
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, List, Optional, Set, Tuple, TypedDict, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TypedDict,
+    Union,
+)
 import heapq
 from collections import deque
 import jinja2
 import yaml
-from huggingface_hub import create_repo, metadata_update, snapshot_download, upload_folder
+from huggingface_hub import (
+    create_repo,
+    metadata_update,
+    snapshot_download,
+    upload_folder,
+)
 from jinja2 import StrictUndefined, Template
 from rich.console import Group
 from rich.panel import Panel
@@ -43,7 +59,7 @@ from .workflow import Workflow
 from .verify_function import evaluate_answer
 from uuid import uuid4
 from .reformulator import prepare_response
-from collections import Counter 
+from collections import Counter
 import random
 import requests
 from .agent_types import AgentAudio, AgentImage, AgentType, handle_agent_output_types
@@ -55,7 +71,14 @@ from .local_python_executor import (
     fix_final_answer_code,
 )
 from .memory import Message
-from .memory import ActionStep, AgentMemory, PlanningStep, SystemPromptStep, TaskStep, ToolCall
+from .memory import (
+    ActionStep,
+    AgentMemory,
+    PlanningStep,
+    SystemPromptStep,
+    TaskStep,
+    ToolCall,
+)
 from .models import (
     ChatMessage,
     MessageRole,
@@ -79,27 +102,35 @@ from .utils import (
     parse_json_tool_call,
     truncate_content,
 )
+
 try:
     from .verify_function import reset_verify_function_cost_tracker
 except ImportError:
-    reset_verify_function_cost_tracker = None # Placeholder if import fails
-    logger.warning("Could not import reset_verify_function_cost_tracker. Verify function costs might not be reset correctly at agent level.")
+    reset_verify_function_cost_tracker = None  # Placeholder if import fails
+    logger.warning(
+        "Could not import reset_verify_function_cost_tracker. Verify function costs might not be reset correctly at agent level."
+    )
 
 
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from openai import OpenAI
+
 logger = getLogger(__name__)
+
 
 def take_a_breath():
     pass
+
 
 def populate_template(template: str, variables: Dict[str, Any]) -> str:
     compiled_template = Template(template, undefined=StrictUndefined)
     try:
         return compiled_template.render(**variables)
     except Exception as e:
-        raise Exception(f"Error during jinja template rendering: {type(e).__name__}: {e}")
+        raise Exception(
+            f"Error during jinja template rendering: {type(e).__name__}: {e}"
+        )
 
 
 class PlanningPromptTemplate(TypedDict):
@@ -225,8 +256,8 @@ class MultiStepAgent:
         agent_type: Optional[str] = "code_agent",
         reflection: bool = False,
         reflection_threshold: int = -1,
-        verify_type: str = 'list-wise',
-        result_merging_type: str='list-wise',
+        verify_type: str = "list-wise",
+        result_merging_type: str = "list-wise",
         provide_run_summary: bool = False,
         final_answer_checks: Optional[List[Callable]] = None,
         debug: bool = False,
@@ -256,13 +287,13 @@ class MultiStepAgent:
         self.reflection = reflection
         self.provide_run_summary = provide_run_summary
         self.debug = debug
-        self.action_trajectory=[]
+        self.action_trajectory = []
         self.managed_agents = {}
         if managed_agents is not None:
             for managed_agent in managed_agents:
-                assert managed_agent.name and managed_agent.description, (
-                    "All managed agents need both a name and a description!"
-                )
+                assert (
+                    managed_agent.name and managed_agent.description
+                ), "All managed agents need both a name and a description!"
             self.managed_agents = {agent.name: agent for agent in managed_agents}
 
         tool_and_managed_agent_names = [tool.name for tool in tools]
@@ -275,12 +306,17 @@ class MultiStepAgent:
             )
 
         for tool in tools:
-            assert isinstance(tool, Tool), f"This element is not of class Tool: {str(tool)}"
+            assert isinstance(
+                tool, Tool
+            ), f"This element is not of class Tool: {str(tool)}"
         self.tools = {tool.name: tool for tool in tools}
 
         if add_base_tools:
             for tool_name, tool_class in TOOL_MAPPING.items():
-                if tool_name != "python_interpreter" or self.__class__.__name__ == "ToolCallingAgent":
+                if (
+                    tool_name != "python_interpreter"
+                    or self.__class__.__name__ == "ToolCallingAgent"
+                ):
                     self.tools[tool_name] = tool_class()
         self.tools["final_answer"] = FinalAnswerTool()
 
@@ -298,11 +334,11 @@ class MultiStepAgent:
         self.static_plan = static_plan
         self.dynamic_update_plan = dynamic_update_plan
         self.workflow = None
-        # tts 
+        # tts
         self.n_rollouts = n_rollouts
         self.reflection_threshold = reflection_threshold
         self.verify_type = verify_type
-        self.result_merging_type = result_merging_type,
+        self.result_merging_type = (result_merging_type,)
         # tts prompts
         self.ORM_prompt = ""
         self.PRM_prompt = ""
@@ -312,13 +348,13 @@ class MultiStepAgent:
         self.ORM_list_wise_prompt = ""
         self.PRM_list_wise_prompt = ""
         # memory
-        self.summary=summary
+        self.summary = summary
         # agent kb args
         self.agent_kb = agent_kb
         self.top_k = top_k
         self.retrieval_type = retrieval_type
         self._load_prompts()
-        self.tool_embedding_costs = {} 
+        self.tool_embedding_costs = {}
 
     @property
     def logs(self):
@@ -326,7 +362,7 @@ class MultiStepAgent:
             "The 'logs' attribute is deprecated and will soon be removed. Please use 'self.memory.steps' instead."
         )
         return [self.memory.system_prompt] + self.memory.steps
-    
+
     def _load_prompt_from_package(self, file_name: str) -> str:
         try:
             path = importlib.resources.files(f"smolagents.prompts").joinpath(file_name)
@@ -342,9 +378,15 @@ class MultiStepAgent:
             self.ORM_prompt = self._load_prompt_from_package("ORM.yaml")
             self.PRM_prompt = self._load_prompt_from_package("PRM.yaml")
             self.LIST_WISE_prompt = self._load_prompt_from_package("list_wise.yaml")
-            self.REFLECTION_prompt = self._load_prompt_from_package("single_node_reflection.yaml")
-            self.ORM_list_wise_prompt=self._load_prompt_from_package("ORM_list_wise.yaml")
-            self.PRM_list_wise_prompt=self._load_prompt_from_package("PRM_list_wise.yaml")
+            self.REFLECTION_prompt = self._load_prompt_from_package(
+                "single_node_reflection.yaml"
+            )
+            self.ORM_list_wise_prompt = self._load_prompt_from_package(
+                "ORM_list_wise.yaml"
+            )
+            self.PRM_list_wise_prompt = self._load_prompt_from_package(
+                "PRM_list_wise.yaml"
+            )
 
             self.BASE_ADDITIONAL_PROMPT = (
                 "You will now receive an additional prompt, which summarizes the experience of the previous step in the trajectory."
@@ -366,7 +408,7 @@ class MultiStepAgent:
 
     def write_memory_to_messages(
         self,
-        memory_steps: Optional[List[ActionStep]]=None,
+        memory_steps: Optional[List[ActionStep]] = None,
         summary_mode: Optional[bool] = False,
     ) -> List[Dict[str, str]]:
         """
@@ -374,9 +416,13 @@ class MultiStepAgent:
         that can be used as input to the LLM. Adds a number of keywords (such as PLAN, error, etc) to help
         the LLM.
         """
-        messages = self.memory.system_prompt.to_messages(summary_mode=summary_mode, summary=self.summary)
+        messages = self.memory.system_prompt.to_messages(
+            summary_mode=summary_mode, summary=self.summary
+        )
         for memory_step in memory_steps if memory_steps else self.memory.steps:
-            messages.extend(memory_step.to_messages(summary_mode=summary_mode, summary=self.summary))
+            messages.extend(
+                memory_step.to_messages(summary_mode=summary_mode, summary=self.summary)
+            )
         return messages
 
     def visualize(self):
@@ -436,7 +482,8 @@ class MultiStepAgent:
                     {
                         "type": "text",
                         "text": populate_template(
-                            self.prompt_templates["final_answer"]["post_messages"], variables={"task": task}
+                            self.prompt_templates["final_answer"]["post_messages"],
+                            variables={"task": task},
                         ),
                     }
                 ],
@@ -448,7 +495,9 @@ class MultiStepAgent:
         except Exception as e:
             return f"Error in generating final LLM output:\n{e}"
 
-    def execute_tool_call(self, tool_name: str, arguments: Union[Dict[str, str], str]) -> Any:
+    def execute_tool_call(
+        self, tool_name: str, arguments: Union[Dict[str, str], str]
+    ) -> Any:
         """
         Execute tool with the provided input and returns the result.
         This method replaces arguments with the actual values from the state if they refer to state variables.
@@ -472,12 +521,16 @@ class MultiStepAgent:
                     if tool_name in self.managed_agents:
                         observation = available_tools[tool_name].__call__(**arguments)
                     else:
-                        observation = available_tools[tool_name].__call__(**arguments, sanitize_inputs_outputs=True)
+                        observation = available_tools[tool_name].__call__(
+                            **arguments, sanitize_inputs_outputs=True
+                        )
                 except json.JSONDecodeError:
                     if tool_name in self.managed_agents:
                         observation = available_tools[tool_name].__call__(arguments)
                     else:
-                        observation = available_tools[tool_name].__call__(arguments, sanitize_inputs_outputs=True)
+                        observation = available_tools[tool_name].__call__(
+                            arguments, sanitize_inputs_outputs=True
+                        )
             elif isinstance(arguments, dict):
                 for key, value in arguments.items():
                     if isinstance(value, str) and value in self.state:
@@ -485,7 +538,9 @@ class MultiStepAgent:
                 if tool_name in self.managed_agents:
                     observation = available_tools[tool_name].__call__(**arguments)
                 else:
-                    observation = available_tools[tool_name].__call__(**arguments, sanitize_inputs_outputs=True)
+                    observation = available_tools[tool_name].__call__(
+                        **arguments, sanitize_inputs_outputs=True
+                    )
             else:
                 error_msg = f"Arguments passed to tool should be a dict or string: got a {type(arguments)}."
                 raise AgentExecutionError(error_msg, self.logger)
@@ -548,37 +603,45 @@ class MultiStepAgent:
         if reset:
             self.memory.reset()
             self.monitor.reset()
-            
+
             # Reset model cumulative costs
             if hasattr(self.model, "reset_cumulative_cost"):
                 self.model.reset_cumulative_cost()
-            
+
             # Reset costs for managed agents' models, if any
             if self.managed_agents:
                 for managed_agent in self.managed_agents.values():
                     if hasattr(managed_agent.model, "reset_cumulative_cost"):
                         managed_agent.model.reset_cumulative_cost()
-            
+
             # Reset verify_function costs (if directly managed or reset globally)
             if reset_verify_function_cost_tracker is not None:
-                 reset_verify_function_cost_tracker() # Global reset
+                reset_verify_function_cost_tracker()  # Global reset
 
             # Reset embedding costs for tools associated with this agent
             # This requires tools to have a consistent way to reset their embedding costs
             for tool_instance in self.tools.values():
-                if hasattr(tool_instance, "embedding_model") and hasattr(tool_instance.embedding_model, "reset_cumulative_cost"):
+                if hasattr(tool_instance, "embedding_model") and hasattr(
+                    tool_instance.embedding_model, "reset_cumulative_cost"
+                ):
                     tool_instance.embedding_model.reset_cumulative_cost()
                 # If the tool itself tracks embedding costs directly (less ideal but possible)
-                elif hasattr(tool_instance, "reset_embedding_cost") and callable(getattr(tool_instance, "reset_embedding_cost")):
+                elif hasattr(tool_instance, "reset_embedding_cost") and callable(
+                    getattr(tool_instance, "reset_embedding_cost")
+                ):
                     tool_instance.reset_embedding_cost()
-            
+
             # Also reset for managed agents' tools
             if self.managed_agents:
                 for managed_agent in self.managed_agents.values():
                     for tool_instance in managed_agent.tools.values():
-                        if hasattr(tool_instance, "embedding_model") and hasattr(tool_instance.embedding_model, "reset_cumulative_cost"):
+                        if hasattr(tool_instance, "embedding_model") and hasattr(
+                            tool_instance.embedding_model, "reset_cumulative_cost"
+                        ):
                             tool_instance.embedding_model.reset_cumulative_cost()
-                        elif hasattr(tool_instance, "reset_embedding_cost") and callable(getattr(tool_instance, "reset_embedding_cost")):
+                        elif hasattr(
+                            tool_instance, "reset_embedding_cost"
+                        ) and callable(getattr(tool_instance, "reset_embedding_cost")):
                             tool_instance.reset_embedding_cost()
 
         self.task = task
@@ -590,7 +653,6 @@ class MultiStepAgent:
 
         self.system_prompt = self.initialize_system_prompt()
         self.memory.system_prompt = SystemPromptStep(system_prompt=self.system_prompt)
-        
 
         self.logger.log_task(
             content=self.task.strip(),
@@ -603,9 +665,19 @@ class MultiStepAgent:
 
         if stream:
             return self._run(task=self.task, images=images)
-        return deque(self._run(task=self.task, images=images, additional_knowledge=additional_knowledge), maxlen=1)[0]
-    
-    def _run(self, task: str, images: List[str] | None = None, additional_knowledge: Optional[str] = None) -> Generator[ActionStep | AgentType, None, None]:
+        return deque(
+            self._run(
+                task=self.task, images=images, additional_knowledge=additional_knowledge
+            ),
+            maxlen=1,
+        )[0]
+
+    def _run(
+        self,
+        task: str,
+        images: List[str] | None = None,
+        additional_knowledge: Optional[str] = None,
+    ) -> Generator[ActionStep | AgentType, None, None]:
         """
         Run the agent in streaming mode and returns a generator of all the steps.
 
@@ -615,44 +687,63 @@ class MultiStepAgent:
         """
         pass
 
-    def reflect_planing(self,task,answer_message,evaluate_thought):
+    def reflect_planing(self, task, answer_message, evaluate_thought):
         memory_messages = self.write_memory_to_messages()[1:]
 
         # Redact updated facts
         facts_update_pre_messages = {
             "role": MessageRole.SYSTEM,
-            "content": [{"type": "text", "text": self.prompt_templates["planning"]["update_facts_pre_messages"]}],
+            "content": [
+                {
+                    "type": "text",
+                    "text": self.prompt_templates["planning"][
+                        "update_facts_pre_messages"
+                    ],
+                }
+            ],
         }
         facts_update_post_messages = {
             "role": MessageRole.USER,
-            "content": [{"type": "text", "text": self.prompt_templates["planning"]["update_facts_post_messages"]}],
+            "content": [
+                {
+                    "type": "text",
+                    "text": self.prompt_templates["planning"][
+                        "update_facts_post_messages"
+                    ],
+                }
+            ],
         }
-        input_messages = [facts_update_pre_messages] + memory_messages + [facts_update_post_messages]
+        input_messages = (
+            [facts_update_pre_messages] + memory_messages + [facts_update_post_messages]
+        )
         chat_message_facts: ChatMessage = self.model(input_messages)
         facts_update = chat_message_facts.content
         update_plan_pre_messages = {
-                "role": MessageRole.SYSTEM,
-                "content": [
-                    {
-                        "type": "text",
-                        "text": populate_template(
-                            self.prompt_templates["planning"]["reflection_plan_pre_messages"], variables={
+            "role": MessageRole.SYSTEM,
+            "content": [
+                {
+                    "type": "text",
+                    "text": populate_template(
+                        self.prompt_templates["planning"][
+                            "reflection_plan_pre_messages"
+                        ],
+                        variables={
                             "task": task,
                             "tools": self.tools,
                             "managed_agents": self.managed_agents,
-                            "trajectory":answer_message,
-                            "analysis":evaluate_thought
+                            "trajectory": answer_message,
+                            "analysis": evaluate_thought,
                         },
-                        ),
-                    }
-                ],
-            }
+                    ),
+                }
+            ],
+        }
         chat_message_plan: ChatMessage = self.model(
             [update_plan_pre_messages],
             stop_sequences=["<end_plan>"],
         )
 
-       # Log final facts and plan
+        # Log final facts and plan
         final_plan_redaction = textwrap.dedent(
             f"""I still need to solve the task I was given:
             ```
@@ -671,21 +762,27 @@ class MultiStepAgent:
             {facts_update}
             ```"""
         )
-        reflection_step=PlanningStep(
-                model_input_messages=input_messages,
-                plan=final_plan_redaction,
-                facts=final_facts_redaction,
-                model_output_message_plan=chat_message_plan,
-                model_output_message_facts=chat_message_facts,
-            )
+        reflection_step = PlanningStep(
+            model_input_messages=input_messages,
+            plan=final_plan_redaction,
+            facts=final_facts_redaction,
+            model_output_message_plan=chat_message_plan,
+            model_output_message_facts=chat_message_facts,
+        )
         self.logger.log(
             Rule("[bold]Updated plan", style="orange"),
             Text(final_plan_redaction),
             level=LogLevel.INFO,
         )
-        return  reflection_step
+        return reflection_step
 
-    def planning_step(self, task, is_first_step: bool, step: int, additional_knowledge: Optional[str] = None) -> None:
+    def planning_step(
+        self,
+        task,
+        is_first_step: bool,
+        step: int,
+        additional_knowledge: Optional[str] = None,
+    ) -> None:
         """
         Used periodically by the agent to plan the next steps to reach the objective.
         Args:
@@ -695,9 +792,11 @@ class MultiStepAgent:
         """
         if self.static_plan:
             return self._get_static_plan()
-        
+
         if self.dynamic_update_plan:
-            return self._handle_dynamic_plan(task, is_first_step, step, additional_knowledge)
+            return self._handle_dynamic_plan(
+                task, is_first_step, step, additional_knowledge
+            )
 
         if is_first_step:
             input_messages, answer_facts = self._initial_fact_generation(task)
@@ -706,7 +805,9 @@ class MultiStepAgent:
             )
         else:
             input_messages, answer_facts = self._update_fact_generation()
-            answer_plan, final_plan_redaction = self._generate_updated_plan(task, answer_facts, step)
+            answer_plan, final_plan_redaction = self._generate_updated_plan(
+                task, answer_facts, step
+            )
 
         final_facts_redaction = textwrap.dedent(
             f"""Here are the facts that I know so far:
@@ -717,7 +818,10 @@ class MultiStepAgent:
 
         # Log results
         self.logger.log(
-            Rule("[bold]Initial plan" if is_first_step else "[bold]Updated plan", style="orange"),
+            Rule(
+                "[bold]Initial plan" if is_first_step else "[bold]Updated plan",
+                style="orange",
+            ),
             Text(final_plan_redaction),
             level=LogLevel.INFO,
         )
@@ -732,40 +836,47 @@ class MultiStepAgent:
 
     def _dynamic_initial_plan(self, task, additional_knowledge):
         # Fact generation
-        input_messages = [self._create_message(MessageRole.USER, self.prompt_templates["planning"]["initial_facts"], task)]
+        input_messages = [
+            self._create_message(
+                MessageRole.USER,
+                self.prompt_templates["planning"]["initial_facts"],
+                task,
+            )
+        ]
         chat_message_facts = self.model(input_messages)
-        
+
         # Plan generation
-        plan_template = self._prepare_plan_template(task, chat_message_facts.content, additional_knowledge)
+        plan_template = self._prepare_plan_template(
+            task, chat_message_facts.content, additional_knowledge
+        )
         message_prompt_plan = self._create_message(MessageRole.USER, plan_template)
-        chat_message_plan = self.model([message_prompt_plan], stop_sequences=["<end_plan>"])
-        
+        chat_message_plan = self.model(
+            [message_prompt_plan], stop_sequences=["<end_plan>"]
+        )
+
         # Initialize workflow
         self.workflow = Workflow(chat_message_plan.content)
-        
+
         return self._create_dynamic_output(
-            input_messages, 
-            chat_message_facts, 
-            chat_message_plan, 
-            is_first_step=True
+            input_messages, chat_message_facts, chat_message_plan, is_first_step=True
         )
 
     def _dynamic_updated_plan(self, task, step):
         # Fact update
         input_messages, facts_update = self._generate_updated_facts()
-        
+
         # Plan update
         update_messages = self._prepare_update_messages(task, step, facts_update)
         chat_message_plan = self.model(update_messages, stop_sequences=["<end_plan>"])
-        
+
         # Apply workflow update
         self.workflow.apply_update(chat_message_plan.content)
-        
+
         return self._create_dynamic_output(
-            input_messages, 
-            ChatMessage(role="assistant", content=facts_update), 
-            chat_message_plan, 
-            is_first_step=False
+            input_messages,
+            ChatMessage(role="assistant", content=facts_update),
+            chat_message_plan,
+            is_first_step=False,
         )
 
     def _prepare_plan_template(self, task, facts, additional_knowledge):
@@ -789,11 +900,17 @@ class MultiStepAgent:
                 "answer_facts": facts,
             },
         )
-    
+
     def _generate_updated_facts(self):
         memory_messages = self.write_memory_to_messages()[1:]
-        pre_message = self._create_message(MessageRole.SYSTEM, self.prompt_templates["planning"]["update_facts_pre_messages"])
-        post_message = self._create_message(MessageRole.USER, self.prompt_templates["planning"]["update_facts_post_messages"])
+        pre_message = self._create_message(
+            MessageRole.SYSTEM,
+            self.prompt_templates["planning"]["update_facts_pre_messages"],
+        )
+        post_message = self._create_message(
+            MessageRole.USER,
+            self.prompt_templates["planning"]["update_facts_post_messages"],
+        )
         input_messages = [pre_message] + memory_messages + [post_message]
         return input_messages, self.model(input_messages).content
 
@@ -802,7 +919,7 @@ class MultiStepAgent:
         pre_message = self._create_message(
             MessageRole.SYSTEM,
             self.prompt_templates["planning"]["update_plan_pre_messages"],
-            task
+            task,
         )
         post_message = self._create_message(
             MessageRole.USER,
@@ -813,21 +930,28 @@ class MultiStepAgent:
                 "managed_agents": self.managed_agents,
                 "facts_update": facts_update,
                 "remaining_steps": (self.max_steps - step),
-            }
+            },
         )
         return [pre_message] + memory_messages + [post_message]
 
-    def _create_dynamic_output(self, input_messages, facts_msg, plan_msg, is_first_step):
-        plan_content = self.workflow.__str__() if not is_first_step else plan_msg.content
+    def _create_dynamic_output(
+        self, input_messages, facts_msg, plan_msg, is_first_step
+    ):
+        plan_content = (
+            self.workflow.__str__() if not is_first_step else plan_msg.content
+        )
         final_plan = self._format_plan_output(plan_content, is_first_step)
         final_facts = self._format_facts_output(facts_msg.content, is_first_step)
-        
+
         self.logger.log(
-            Rule(f"[bold]{'Initial' if is_first_step else 'Updated'} plan", style="orange"),
+            Rule(
+                f"[bold]{'Initial' if is_first_step else 'Updated'} plan",
+                style="orange",
+            ),
             Text(final_plan),
             level=LogLevel.INFO,
         )
-        
+
         return PlanningStep(
             model_input_messages=input_messages,
             plan=final_plan,
@@ -837,10 +961,13 @@ class MultiStepAgent:
         )
 
     def _format_plan_output(self, content, is_first_step):
-        template = """Here is the plan of action that I will follow to solve the task:
+        template = (
+            """Here is the plan of action that I will follow to solve the task:
         ```
         {content}
-        ```""" if is_first_step else """I still need to solve the task I was given:
+        ```"""
+            if is_first_step
+            else """I still need to solve the task I was given:
         ```
         {task}
         ```
@@ -849,22 +976,38 @@ class MultiStepAgent:
         ```
         {content}
         ```"""
+        )
         return textwrap.dedent(template.format(content=content))
 
     def _format_facts_output(self, content, is_first_step):
-        template = "Here are the facts that I know so far:" if is_first_step else "Here is the updated list of the facts that I know:"
-        return textwrap.dedent(f"""{template}
+        template = (
+            "Here are the facts that I know so far:"
+            if is_first_step
+            else "Here is the updated list of the facts that I know:"
+        )
+        return textwrap.dedent(
+            f"""{template}
         ```
         {content}
-        ```""".strip())
+        ```""".strip()
+        )
 
     def _create_message(self, role, template, variables=None):
         return {
             "role": role,
-            "content": [{
-                "type": "text",
-                "text": populate_template(template, variables=variables if isinstance(variables, dict) else {"task": variables})
-            }]
+            "content": [
+                {
+                    "type": "text",
+                    "text": populate_template(
+                        template,
+                        variables=(
+                            variables
+                            if isinstance(variables, dict)
+                            else {"task": variables}
+                        ),
+                    ),
+                }
+            ],
         }
 
     def _initial_fact_generation(self, task):
@@ -875,7 +1018,8 @@ class MultiStepAgent:
                     {
                         "type": "text",
                         "text": populate_template(
-                            self.prompt_templates["planning"]["initial_facts"], variables={"task": task}
+                            self.prompt_templates["planning"]["initial_facts"],
+                            variables={"task": task},
                         ),
                     }
                 ],
@@ -885,13 +1029,15 @@ class MultiStepAgent:
         return input_messages, chat_message_facts.content
 
     def _get_static_plan(self):
-        static_plan = textwrap.dedent(f"""Here is the plan of action that I will follow to solve the task:
+        static_plan = textwrap.dedent(
+            f"""Here is the plan of action that I will follow to solve the task:
         ```
         1. If needed, use the search tool to find relevant information.
         2. To inspect the information from search tool, use the proper agent tool.
         3. Execute domain-specific processing with all information you have, such as mathematical calculations, statistical analysis or logical reasoning.    
         4. Format final output, remember to follow the commanded format.
-        ```""")
+        ```"""
+        )
 
         memory_messages = self.write_memory_to_messages()
 
@@ -919,12 +1065,13 @@ class MultiStepAgent:
         if is_first_step:
             return self._dynamic_initial_plan(task, additional_knowledge)
         return self._dynamic_updated_plan(task, step)
-    
-    
+
     def _generate_initial_plan(self, task, answer_facts, additional_knowledge):
 
         if self.agent_kb and additional_knowledge:
-            knowledge_data_all = "Please strictly follow the suggestions below:\n" + additional_knowledge
+            knowledge_data_all = (
+                "Please strictly follow the suggestions below:\n" + additional_knowledge
+            )
             final_facts_knowledge = textwrap.dedent(
                 f"""Here are the similar tasks, plans and relevant experience that I should follow:
                 ```
@@ -972,7 +1119,9 @@ class MultiStepAgent:
             "content": [{"type": "text", "text": initial_plan_template}],
         }
 
-        chat_message_plan: ChatMessage = self.model([message_prompt_plan], stop_sequences=["<end_plan>"])
+        chat_message_plan: ChatMessage = self.model(
+            [message_prompt_plan], stop_sequences=["<end_plan>"]
+        )
         final_plan_redaction = textwrap.dedent(
             f"""Here is the plan of action that I will follow to solve the task:
             ```
@@ -981,23 +1130,37 @@ class MultiStepAgent:
         )
         return chat_message_plan, final_plan_redaction
 
-
     def _update_fact_generation(self):
         memory_messages = self.write_memory_to_messages()[1:]
 
         facts_update_pre_messages = {
             "role": MessageRole.SYSTEM,
-            "content": [{"type": "text", "text": self.prompt_templates["planning"]["update_facts_pre_messages"]}],
+            "content": [
+                {
+                    "type": "text",
+                    "text": self.prompt_templates["planning"][
+                        "update_facts_pre_messages"
+                    ],
+                }
+            ],
         }
         facts_update_post_messages = {
             "role": MessageRole.USER,
-            "content": [{"type": "text", "text": self.prompt_templates["planning"]["update_facts_post_messages"]}],
+            "content": [
+                {
+                    "type": "text",
+                    "text": self.prompt_templates["planning"][
+                        "update_facts_post_messages"
+                    ],
+                }
+            ],
         }
 
-        input_messages = [facts_update_pre_messages] + memory_messages + [facts_update_post_messages]
+        input_messages = (
+            [facts_update_pre_messages] + memory_messages + [facts_update_post_messages]
+        )
         chat_message_facts: ChatMessage = self.model(input_messages)
         return input_messages, chat_message_facts.content
-
 
     def _generate_updated_plan(self, task, answer_facts, step):
         memory_messages = self.write_memory_to_messages()[1:]
@@ -1008,7 +1171,8 @@ class MultiStepAgent:
                 {
                     "type": "text",
                     "text": populate_template(
-                        self.prompt_templates["planning"]["update_plan_pre_messages"], variables={"task": task}
+                        self.prompt_templates["planning"]["update_plan_pre_messages"],
+                        variables={"task": task},
                     ),
                 }
             ],
@@ -1021,7 +1185,9 @@ class MultiStepAgent:
                     {
                         "type": "text",
                         "text": populate_template(
-                            self.prompt_templates["planning"]["update_plan_post_messages_with_subtask"],
+                            self.prompt_templates["planning"][
+                                "update_plan_post_messages_with_subtask"
+                            ],
                             variables={
                                 "task": task,
                                 "tools": self.tools,
@@ -1040,7 +1206,9 @@ class MultiStepAgent:
                     {
                         "type": "text",
                         "text": populate_template(
-                            self.prompt_templates["planning"]["update_plan_post_messages"],
+                            self.prompt_templates["planning"][
+                                "update_plan_post_messages"
+                            ],
                             variables={
                                 "task": task,
                                 "tools": self.tools,
@@ -1092,7 +1260,8 @@ class MultiStepAgent:
         )
         report = self.run(full_task, **kwargs)
         answer = populate_template(
-            self.prompt_templates["managed_agent"]["report"], variables=dict(name=self.name, final_answer=report)
+            self.prompt_templates["managed_agent"]["report"],
+            variables=dict(name=self.name, final_answer=report),
         )
         if self.provide_run_summary:
             answer += "\n\nFor more detail, find below a summary of this agent's work:\n<summary_of_work>\n"
@@ -1125,13 +1294,20 @@ class MultiStepAgent:
                 agent_suffix = f"managed_agents.{agent_name}"
                 if relative_path:
                     agent_suffix = relative_path + "." + agent_suffix
-                agent.save(os.path.join(output_dir, "managed_agents", agent_name), relative_path=agent_suffix)
+                agent.save(
+                    os.path.join(output_dir, "managed_agents", agent_name),
+                    relative_path=agent_suffix,
+                )
 
         class_name = self.__class__.__name__
 
         for tool in self.tools.values():
             make_init_file(os.path.join(output_dir, "tools"))
-            tool.save(os.path.join(output_dir, "tools"), tool_file_name=tool.name, make_gradio_app=False)
+            tool.save(
+                os.path.join(output_dir, "tools"),
+                tool_file_name=tool.name,
+                make_gradio_app=False,
+            )
 
         yaml_prompts = yaml.safe_dump(
             self.prompt_templates,
@@ -1151,12 +1327,17 @@ class MultiStepAgent:
         with open(os.path.join(output_dir, "agent.json"), "w", encoding="utf-8") as f:
             json.dump(agent_dict, f, indent=4)
 
-        with open(os.path.join(output_dir, "requirements.txt"), "w", encoding="utf-8") as f:
+        with open(
+            os.path.join(output_dir, "requirements.txt"), "w", encoding="utf-8"
+        ) as f:
             f.writelines(f"{r}\n" for r in agent_dict["requirements"])
 
         agent_name = f"agent_{self.name}" if getattr(self, "name", None) else "agent"
-        managed_agent_relative_path = relative_path + "." if relative_path is not None else ""
-        app_template = textwrap.dedent("""
+        managed_agent_relative_path = (
+            relative_path + "." if relative_path is not None else ""
+        )
+        app_template = textwrap.dedent(
+            """
             import yaml
             import os
             from smolagents import GradioUI, {{ class_name }}, {{ agent_dict['model']['class'] }}
@@ -1193,10 +1374,15 @@ class MultiStepAgent:
             )
             if __name__ == "__main__":
                 GradioUI({{ agent_name }}).launch()
-            """).strip()
-        template_env = jinja2.Environment(loader=jinja2.BaseLoader(), undefined=jinja2.StrictUndefined)
+            """
+        ).strip()
+        template_env = jinja2.Environment(
+            loader=jinja2.BaseLoader(), undefined=jinja2.StrictUndefined
+        )
         template_env.filters["repr"] = repr
-        template_env.filters["camelcase"] = lambda value: "".join(word.capitalize() for word in value.split("_"))
+        template_env.filters["camelcase"] = lambda value: "".join(
+            word.capitalize() for word in value.split("_")
+        )
         template = template_env.from_string(app_template)
 
         app_text = template.render(
@@ -1217,17 +1403,30 @@ class MultiStepAgent:
         """Converts agent into a dictionary."""
         for attr in ["final_answer_checks", "step_callbacks"]:
             if getattr(self, attr, None):
-                self.logger.log(f"This agent has {attr}: they will be ignored by this method.", LogLevel.INFO)
+                self.logger.log(
+                    f"This agent has {attr}: they will be ignored by this method.",
+                    LogLevel.INFO,
+                )
 
         tool_dicts = [tool.to_dict() for tool in self.tools.values()]
-        tool_requirements = {req for tool in self.tools.values() for req in tool.to_dict()["requirements"]}
+        tool_requirements = {
+            req
+            for tool in self.tools.values()
+            for req in tool.to_dict()["requirements"]
+        }
         managed_agents_requirements = {
-            req for managed_agent in self.managed_agents.values() for req in managed_agent.to_dict()["requirements"]
+            req
+            for managed_agent in self.managed_agents.values()
+            for req in managed_agent.to_dict()["requirements"]
         }
         requirements = tool_requirements | managed_agents_requirements
         if hasattr(self, "authorized_imports"):
             requirements.update(
-                {package.split(".")[0] for package in self.authorized_imports if package not in BASE_BUILTIN_MODULES}
+                {
+                    package.split(".")[0]
+                    for package in self.authorized_imports
+                    if package not in BASE_BUILTIN_MODULES
+                }
             )
 
         agent_dict = {
@@ -1237,7 +1436,8 @@ class MultiStepAgent:
                 "data": self.model.to_dict(),
             },
             "managed_agents": {
-                managed_agent.name: managed_agent.__class__.__name__ for managed_agent in self.managed_agents.values()
+                managed_agent.name: managed_agent.__class__.__name__
+                for managed_agent in self.managed_agents.values()
             },
             "prompt_templates": self.prompt_templates,
             "max_steps": self.max_steps,
@@ -1321,16 +1521,24 @@ class MultiStepAgent:
         agent_dict = json.loads((folder / "agent.json").read_text())
 
         managed_agents = []
-        for managed_agent_name, managed_agent_class in agent_dict["managed_agents"].items():
-            agent_cls = getattr(importlib.import_module("smolagents.agents"), managed_agent_class)
-            managed_agents.append(agent_cls.from_folder(folder / "managed_agents" / managed_agent_name))
+        for managed_agent_name, managed_agent_class in agent_dict[
+            "managed_agents"
+        ].items():
+            agent_cls = getattr(
+                importlib.import_module("smolagents.agents"), managed_agent_class
+            )
+            managed_agents.append(
+                agent_cls.from_folder(folder / "managed_agents" / managed_agent_name)
+            )
 
         tools = []
         for tool_name in agent_dict["tools"]:
             tool_code = (folder / "tools" / f"{tool_name}.py").read_text()
             tools.append(Tool.from_code(tool_code))
 
-        model_class: Model = getattr(importlib.import_module("smolagents.models"), agent_dict["model"]["class"])
+        model_class: Model = getattr(
+            importlib.import_module("smolagents.models"), agent_dict["model"]["class"]
+        )
         model = model_class.from_dict(agent_dict["model"]["data"])
 
         args = dict(
@@ -1395,7 +1603,9 @@ class MultiStepAgent:
 
         with tempfile.TemporaryDirectory() as work_dir:
             self.save(work_dir)
-            logger.info(f"Uploading the following files to {repo_id}: {','.join(os.listdir(work_dir))}")
+            logger.info(
+                f"Uploading the following files to {repo_id}: {','.join(os.listdir(work_dir))}"
+            )
             return upload_folder(
                 repo_id=repo_id,
                 commit_message=commit_message,
@@ -1426,12 +1636,14 @@ class ToolCallingAgent(MultiStepAgent):
         planning_interval: Optional[int] = None,
         agent_kb: bool = False,
         agent_type: Optional[str] = "tool_agent",
-        top_k:Optional[int] = 1,
-        retrieval_type:Optional[str] = "hybrid",
+        top_k: Optional[int] = 1,
+        retrieval_type: Optional[str] = "hybrid",
         **kwargs,
     ):
         prompt_templates = prompt_templates or yaml.safe_load(
-            importlib.resources.files(f"smolagents.prompts").joinpath("toolcalling_agent.yaml").read_text()
+            importlib.resources.files(f"smolagents.prompts")
+            .joinpath("toolcalling_agent.yaml")
+            .read_text()
         )
         super().__init__(
             tools=tools,
@@ -1439,9 +1651,9 @@ class ToolCallingAgent(MultiStepAgent):
             prompt_templates=prompt_templates,
             planning_interval=planning_interval,
             agent_kb=agent_kb,
-            agent_type= agent_type,
-            top_k = top_k,
-            retrieval_type = retrieval_type,
+            agent_type=agent_type,
+            top_k=top_k,
+            retrieval_type=retrieval_type,
             **kwargs,
         )
 
@@ -1454,8 +1666,13 @@ class ToolCallingAgent(MultiStepAgent):
             variables={"tools": self.tools, "managed_agents": self.managed_agents},
         )
         return system_prompt
-    
-    def _run(self, task: str, images: List[str] | None = None, additional_knowledge: Optional[str] = None) -> Generator[ActionStep | AgentType, None, None]:
+
+    def _run(
+        self,
+        task: str,
+        images: List[str] | None = None,
+        additional_knowledge: Optional[str] = None,
+    ) -> Generator[ActionStep | AgentType, None, None]:
         """
         Run the agent in streaming mode and returns a generator of all the steps.
 
@@ -1473,7 +1690,11 @@ class ToolCallingAgent(MultiStepAgent):
                 observations_images=images,
             )
             try:
-                if (self.planning_interval is not None and self.step_number % self.planning_interval == 0 and self.planning_interval != 1) or self.step_number == 1:
+                if (
+                    self.planning_interval is not None
+                    and self.step_number % self.planning_interval == 0
+                    and self.planning_interval != 1
+                ) or self.step_number == 1:
                     planning_step = self.planning_step(
                         task,
                         is_first_step=(self.step_number == 1),
@@ -1489,7 +1710,10 @@ class ToolCallingAgent(MultiStepAgent):
                             assert check_function(final_answer, self.memory)
                         except Exception as e:
                             final_answer = None
-                            raise AgentError(f"Check {check_function.__name__} failed with error: {e}", self.logger)
+                            raise AgentError(
+                                f"Check {check_function.__name__} failed with error: {e}",
+                                self.logger,
+                            )
             except AgentError as e:
                 memory_step.error = e
                 raise
@@ -1510,17 +1734,15 @@ class ToolCallingAgent(MultiStepAgent):
             step_start_time = time.time()
             final_answer = self.provide_final_answer(task, images)
             final_memory_step = ActionStep(
-                step_number=self.step_number, error=AgentMaxStepsError(error_message, self.logger)
+                step_number=self.step_number,
+                error=AgentMaxStepsError(error_message, self.logger),
             )
             final_memory_step.action_output = final_answer
             final_memory_step.end_time = time.time()
             final_memory_step.duration = memory_step.end_time - step_start_time
             self.memory.steps.append(final_memory_step)
 
-            _task_info = {
-                'answer': final_answer,
-                'tool_calls': self.tool_call_records
-            }
+            _task_info = {"answer": final_answer, "tool_calls": self.tool_call_records}
             self.task_records[self.task] = _task_info
 
             for callback in self.step_callbacks:
@@ -1532,13 +1754,16 @@ class ToolCallingAgent(MultiStepAgent):
 
         yield handle_agent_output_types(final_answer)
 
-
     def step(self, memory_step: ActionStep, memory_messages=None) -> Union[None, Any]:
         """
         Perform one step in the ReAct framework: the agent thinks, acts, and observes the result.
         Returns None if the step is not final.
         """
-        memory_messages = self.write_memory_to_messages() if memory_messages is None else memory_messages
+        memory_messages = (
+            self.write_memory_to_messages()
+            if memory_messages is None
+            else memory_messages
+        )
 
         self.input_messages = memory_messages
 
@@ -1552,18 +1777,26 @@ class ToolCallingAgent(MultiStepAgent):
             )
             memory_step.model_output_message = model_message
             if model_message.tool_calls is None or len(model_message.tool_calls) == 0:
-                raise Exception("Model did not call any tools. Call `final_answer` tool to return a final answer.")
+                raise Exception(
+                    "Model did not call any tools. Call `final_answer` tool to return a final answer."
+                )
             tool_call = model_message.tool_calls[0]
             tool_name, tool_call_id = tool_call.function.name, tool_call.id
             tool_arguments = tool_call.function.arguments
 
         except Exception as e:
-            raise AgentGenerationError(f"Error in generating tool call with model:\n{e}", self.logger) from e
+            raise AgentGenerationError(
+                f"Error in generating tool call with model:\n{e}", self.logger
+            ) from e
 
-        memory_step.tool_calls = [ToolCall(name=tool_name, arguments=tool_arguments, id=tool_call_id)]
+        memory_step.tool_calls = [
+            ToolCall(name=tool_name, arguments=tool_arguments, id=tool_call_id)
+        ]
 
         self.logger.log(
-            Panel(Text(f"Calling tool: '{tool_name}' with arguments: {tool_arguments}")),
+            Panel(
+                Text(f"Calling tool: '{tool_name}' with arguments: {tool_arguments}")
+            ),
             level=LogLevel.INFO,
         )
         if tool_name == "final_answer":
@@ -1574,9 +1807,7 @@ class ToolCallingAgent(MultiStepAgent):
                     answer = tool_arguments
             else:
                 answer = tool_arguments
-            if (
-                isinstance(answer, str) and answer in self.state.keys()
-            ):
+            if isinstance(answer, str) and answer in self.state.keys():
                 final_answer = self.state[answer]
                 self.logger.log(
                     f"[bold {YELLOW_HEX}]Final answer:[/bold {YELLOW_HEX}] Extracting key '{answer}' from state to return value '{final_answer}'.",
@@ -1592,12 +1823,9 @@ class ToolCallingAgent(MultiStepAgent):
                 take_a_breath()
             memory_step.action_output = final_answer
 
-            _task_info = {
-                'answer': final_answer,
-                'tool_calls': self.tool_call_records
-            }
+            _task_info = {"answer": final_answer, "tool_calls": self.tool_call_records}
             self.task_records[self.task] = _task_info
-            self.tool_call_records=[]
+            self.tool_call_records = []
 
             return final_answer
         else:
@@ -1606,12 +1834,12 @@ class ToolCallingAgent(MultiStepAgent):
             observation = self.execute_tool_call(tool_name, tool_arguments)
 
             _tool_info = {
-                'name': tool_name,
-                'args': tool_arguments,
-                'observation': observation
+                "name": tool_name,
+                "args": tool_arguments,
+                "observation": observation,
             }
             self.tool_call_records.append(_tool_info)
-            
+
             observation_type = type(observation)
             if observation_type in [AgentImage, AgentAudio]:
                 if observation_type == AgentImage:
@@ -1653,6 +1881,7 @@ class CodeAgent(MultiStepAgent):
         **kwargs: Additional keyword arguments.
 
     """
+
     def __init__(
         self,
         tools: List[Tool],
@@ -1664,29 +1893,35 @@ class CodeAgent(MultiStepAgent):
         planning_interval: Optional[int] = None,
         use_e2b_executor: bool = False,
         max_print_outputs_length: Optional[int] = None,
-        search_type: str='default',
+        search_type: str = "default",
         summary: bool = False,
         use_long_term_memory: bool = False,
         retrieve_key_memory: bool = False,
         **kwargs,
     ):
-        self.additional_authorized_imports = additional_authorized_imports if additional_authorized_imports else []
-        self.authorized_imports = list(set(BASE_BUILTIN_MODULES) | set(self.additional_authorized_imports))
+        self.additional_authorized_imports = (
+            additional_authorized_imports if additional_authorized_imports else []
+        )
+        self.authorized_imports = list(
+            set(BASE_BUILTIN_MODULES) | set(self.additional_authorized_imports)
+        )
         self.use_e2b_executor = use_e2b_executor
         self.max_print_outputs_length = max_print_outputs_length
-        self.search_type=search_type
-        self.summary=summary
-        self.use_long_term_memory=use_long_term_memory
-        self.retrieve_key_memory=retrieve_key_memory
+        self.search_type = search_type
+        self.summary = summary
+        self.use_long_term_memory = use_long_term_memory
+        self.retrieve_key_memory = retrieve_key_memory
         self.api_key = os.getenv("OPENAI_API_KEY")
         self.api_base = os.getenv("OPENAI_BASE_URL")
         self.client = OpenAI(api_key=self.api_key, base_url=self.api_base)
         self.texts = []  # 存储原始文本
         self.embeddings = []  # 存储对应的向量表示
-        self.long_term_memory=[]
-        self.Most_Similar=None
+        self.long_term_memory = []
+        self.Most_Similar = None
         prompt_templates = prompt_templates or yaml.safe_load(
-            importlib.resources.files(f"smolagents.prompts").joinpath("code_agent.yaml").read_text()
+            importlib.resources.files(f"smolagents.prompts")
+            .joinpath("code_agent.yaml")
+            .read_text()
         )
 
         super().__init__(
@@ -1726,39 +1961,39 @@ class CodeAgent(MultiStepAgent):
     def embed_text(self, text: str) -> List[float]:
         try:
             response = self.client.embeddings.create(
-                input=text,
-                model="text-embedding-ada-002"
+                input=text, model="text-embedding-ada-002"
             )
             return response.data[0].embedding
         except Exception as e:
             print(f"Vectorization failed: {e}")
             raise
-    
-    def process_and_store_text(self, text: str, top_n: int = 1) -> List[Dict[str, float]]:
+
+    def process_and_store_text(
+        self, text: str, top_n: int = 1
+    ) -> List[Dict[str, float]]:
         similar_texts = self.find_most_similar(text, top_n)
         self.add_text(text)
         return similar_texts
-    
+
     def add_text(self, text: str) -> None:
         embedding = self.embed_text(text)
         self.texts.append(text)
         self.embeddings.append(embedding)
-    
-    def find_most_similar(self, query_text: str, top_n: int = 1) -> List[Dict[str, float]]:
+
+    def find_most_similar(
+        self, query_text: str, top_n: int = 1
+    ) -> List[Dict[str, float]]:
         if not self.texts:
             return []
-            
+
         query_embedding = np.array(self.embed_text(query_text)).reshape(1, -1)
         embeddings_array = np.array(self.embeddings)
         similarities = cosine_similarity(query_embedding, embeddings_array)[0]
         top_indices = similarities.argsort()[::-1][:top_n]
-        
+
         results = []
         for idx in top_indices:
-            results.append({
-                "text": self.texts[idx],
-                "similarity": similarities[idx]
-            })
+            results.append({"text": self.texts[idx], "similarity": similarities[idx]})
         return results
 
     def initialize_system_prompt(self) -> str:
@@ -1775,33 +2010,35 @@ class CodeAgent(MultiStepAgent):
             },
         )
         return system_prompt
-    
+
     def edit_code_by_user(self, failed_code: str):
         import subprocess
 
         def y_n_prompt(prompt: str) -> bool:
             while True:
                 user_input = input(prompt).strip().lower()
-                if user_input in ['y', 'n']:
-                    return user_input == 'y'
+                if user_input in ["y", "n"]:
+                    return user_input == "y"
                 else:
                     print("Please input 'Y' or 'n'.")
 
         new_code = ""
-        os.makedirs('tmp', exist_ok=True)
-        code_file = os.path.join('tmp', f"{hash(failed_code)}.py")
-        with open(code_file, 'w') as f:
+        os.makedirs("tmp", exist_ok=True)
+        code_file = os.path.join("tmp", f"{hash(failed_code)}.py")
+        with open(code_file, "w") as f:
             f.write(failed_code)
 
         if y_n_prompt("Open Code Editor? (Y/n): "):
             result = subprocess.run(["vim", code_file], check=True)
             if result.returncode == 0:
-                with open(code_file, 'r') as f:
+                with open(code_file, "r") as f:
                     new_code = f.read()
         return new_code
 
     def execute_code(self, memory_step: ActionStep, code_action: str):
-        self.logger.log_code(title="Executing code:", content=code_action, level=LogLevel.INFO)
+        self.logger.log_code(
+            title="Executing code:", content=code_action, level=LogLevel.INFO
+        )
         try:
             output, execution_logs, is_final_answer = self.python_executor(
                 code_action,
@@ -1822,7 +2059,10 @@ class CodeAgent(MultiStepAgent):
                 execution_outputs_console,
             )
         except Exception as e:
-            if hasattr(self.python_executor, "state") and "_print_outputs" in self.python_executor.state:
+            if (
+                hasattr(self.python_executor, "state")
+                and "_print_outputs" in self.python_executor.state
+            ):
                 execution_logs = str(self.python_executor.state["_print_outputs"])
                 if len(execution_logs) > 0:
                     execution_outputs_console = [
@@ -1830,7 +2070,9 @@ class CodeAgent(MultiStepAgent):
                         Text(execution_logs),
                     ]
                     memory_step.observations = "Execution logs:\n" + execution_logs
-                    self.logger.log(Group(*execution_outputs_console), level=LogLevel.INFO)
+                    self.logger.log(
+                        Group(*execution_outputs_console), level=LogLevel.INFO
+                    )
             error_msg = str(e)
             if "Import of " in error_msg and " is not allowed" in error_msg:
                 self.logger.log(
@@ -1844,41 +2086,44 @@ class CodeAgent(MultiStepAgent):
             raise AgentExecutionError(error_msg, self.logger)
 
     def _parse_plan(self, raw_plan):
-        parallel_section = re.search(r'##PARALLEL_LIST\n([ST\d, ]+)', raw_plan)
-        parallel_list = [x.strip() for x in parallel_section.group(1).split(',')] if parallel_section else []
-        
+        parallel_section = re.search(r"##PARALLEL_LIST\n([ST\d, ]+)", raw_plan)
+        parallel_list = (
+            [x.strip() for x in parallel_section.group(1).split(",")]
+            if parallel_section
+            else []
+        )
+
         subtask_dict = {}
-        pattern = r'##(ST\d+)([\s\S]*?)(?=\n##ST|\Z)'
-        
+        pattern = r"##(ST\d+)([\s\S]*?)(?=\n##ST|\Z)"
+
         for match in re.finditer(pattern, raw_plan):
             st_code, content = match.groups()
             content_stripped = content.strip()
-            title_line, _, steps_content = content_stripped.partition('\n')
-            title = title_line.split(':', 1)[-1].strip() if ':' in title_line else title_line.strip()
-            steps = re.findall(r'^\d+\..*$', content_stripped, flags=re.MULTILINE)
-            steps_str = '\n'.join(steps)
-            subtask_dict[st_code] = {
-                "title": title,
-                "steps": steps_str
-            }
+            title_line, _, steps_content = content_stripped.partition("\n")
+            title = (
+                title_line.split(":", 1)[-1].strip()
+                if ":" in title_line
+                else title_line.strip()
+            )
+            steps = re.findall(r"^\d+\..*$", content_stripped, flags=re.MULTILINE)
+            steps_str = "\n".join(steps)
+            subtask_dict[st_code] = {"title": title, "steps": steps_str}
         return parallel_list, subtask_dict
-    
+
     def _retrieve_key_memory(self, memory_messages: List[Message]):
         if not self.retrieve_key_memory or len(memory_messages) <= 4:
             return
         prompt = f"Summarize the following text, i.e. what the agent did at the current step. Highlight key points: {memory_messages[-1]} \n Note that you are only responsible for summarizing, not providing optimization suggestions for the next step."
         chat_message: ChatMessage = self.model(
-            [
-                Message(role=MessageRole.USER, content=[{"type": "text", "text": prompt}])
-            ]
+            [Message(role=MessageRole.USER, content=[{"type": "text", "text": prompt}])]
         )
         if chat_message is None or chat_message.content is None:
             raise ValueError("Model returned empty or invalid chat message.")
-        summary_content =chat_message.content
+        summary_content = chat_message.content
         similar_texts = self.process_and_store_text(summary_content, top_n=1)
-        print('similar_texts',similar_texts)
+        print("similar_texts", similar_texts)
         if similar_texts:
-            Most_Similar=similar_texts[0]['text']
+            Most_Similar = similar_texts[0]["text"]
             return Most_Similar
         else:
             print("This is the first step, there is no similar step already")
@@ -1896,9 +2141,7 @@ class CodeAgent(MultiStepAgent):
             2. You must provide optimization suggestions for the next step."""
 
         chat_message: ChatMessage = self.model(
-            [
-                Message(role=MessageRole.USER, content=[{"type": "text", "text": prompt}])
-            ]
+            [Message(role=MessageRole.USER, content=[{"type": "text", "text": prompt}])]
         )
 
         if chat_message is None or chat_message.content is None:
@@ -1907,10 +2150,16 @@ class CodeAgent(MultiStepAgent):
         summary_content = chat_message.content
         self.long_term_memory = summary_content
 
-    def step(self, memory_step: ActionStep, memory_messages=None, additional_prompt: str = "", memory_steps: List[ActionStep | PlanningStep | TaskStep]=None) -> Union[None, Any]:
+    def step(
+        self,
+        memory_step: ActionStep,
+        memory_messages=None,
+        additional_prompt: str = "",
+        memory_steps: List[ActionStep | PlanningStep | TaskStep] = None,
+    ) -> Union[None, Any]:
         """
         Perform one step in the ReAct framework: the agent thinks, acts, and observes the result.
-        This function executes a step by sending messages to a model, processing the response, 
+        This function executes a step by sending messages to a model, processing the response,
         and interacting with external tools (e.g., code execution). It updates the memory step with
         relevant information and returns the final answer if the step is complete.
 
@@ -1922,14 +2171,18 @@ class CodeAgent(MultiStepAgent):
         Returns:
             Union[None, Any]: The model's output if the step is final; otherwise, None.
         """
-        memory_messages = self.write_memory_to_messages() if memory_messages is None else memory_messages
-        if self.use_long_term_memory and len(memory_messages)>1:
+        memory_messages = (
+            self.write_memory_to_messages()
+            if memory_messages is None
+            else memory_messages
+        )
+        if self.use_long_term_memory and len(memory_messages) > 1:
             self.long_term_memory = self._update_long_term_memory(memory_messages)
-        if self.retrieve_key_memory and len(memory_messages)>4:
+        if self.retrieve_key_memory and len(memory_messages) > 4:
             self.Most_Similar = self._retrieve_key_memory(memory_messages)
 
         current_step = memory_steps[-1]
-        current_message = memory_messages[-1]['content'][0]['text']
+        current_message = memory_messages[-1]["content"][0]["text"]
         plan_list = []
         message_list = []
 
@@ -1942,19 +2195,27 @@ class CodeAgent(MultiStepAgent):
                 subtask_steps = subtask_dict[plan_name]["steps"]
 
                 subtask_plan = textwrap.dedent(
-                                f"""ANSWER THE SUBTASK:
+                    f"""ANSWER THE SUBTASK:
                                 ```
                                 subtask: {subtask_title}
                                 steps: {subtask_steps}
                                 ```"""
-                            )
+                )
                 plan_list.append(subtask_plan)
 
         if len(plan_list) > 0:
             for plan in plan_list:
-                message = Message(role=MessageRole.USER, content=[{"type": "text", "text": f"[SUB TASK AND steps]:\n{plan.strip()}"}])
+                message = Message(
+                    role=MessageRole.USER,
+                    content=[
+                        {
+                            "type": "text",
+                            "text": f"[SUB TASK AND steps]:\n{plan.strip()}",
+                        }
+                    ],
+                )
                 message_list.append(message)
-            
+
             model_input_messages_list = []
             model_output_message_list = []
             model_output_list = []
@@ -1966,12 +2227,19 @@ class CodeAgent(MultiStepAgent):
                 input_messages = memory_messages.copy()[:-1]
                 input_messages.append(message)
                 if additional_prompt and self.reflection:
-                    input_messages.append(Message(role=MessageRole.SYSTEM, content=[{"type": "text", "text": additional_prompt}]))
+                    input_messages.append(
+                        Message(
+                            role=MessageRole.SYSTEM,
+                            content=[{"type": "text", "text": additional_prompt}],
+                        )
+                    )
 
                 model_input_messages_list.append(input_messages)
-                
+
                 try:
-                    additional_args = {"grammar": self.grammar} if self.grammar is not None else {}
+                    additional_args = (
+                        {"grammar": self.grammar} if self.grammar is not None else {}
+                    )
                     chat_message: ChatMessage = self.model(
                         input_messages,
                         stop_sequences=["<end_code>", "Observation:"],
@@ -1979,10 +2247,14 @@ class CodeAgent(MultiStepAgent):
                     )
 
                     if chat_message is None or chat_message.content is None:
-                        raise ValueError("Model returned empty or invalid chat message.")
+                        raise ValueError(
+                            "Model returned empty or invalid chat message."
+                        )
                     if isinstance(chat_message.content, list):
                         # If it's a list, join its elements into a single string
-                        model_output = ''.join([str(item) for item in chat_message.content])  # Join list items into a string
+                        model_output = "".join(
+                            [str(item) for item in chat_message.content]
+                        )  # Join list items into a string
                     else:
                         # If it's already a string, use it directly
                         model_output = chat_message.content
@@ -1990,7 +2262,9 @@ class CodeAgent(MultiStepAgent):
                     model_output = chat_message.content
                     model_output_list.append(model_output)
                 except Exception as e:
-                    raise AgentGenerationError(f"Error in generating model output:\n{e}", self.logger) from e
+                    raise AgentGenerationError(
+                        f"Error in generating model output:\n{e}", self.logger
+                    ) from e
 
                 self.logger.log_markdown(
                     content=model_output,
@@ -2007,7 +2281,9 @@ class CodeAgent(MultiStepAgent):
                         print(error_msg)
                         new_code = self.edit_code_by_user(failed_code=model_output)
                         if new_code:
-                            code_action = fix_final_answer_code(parse_code_blobs(new_code))
+                            code_action = fix_final_answer_code(
+                                parse_code_blobs(new_code)
+                            )
                     else:
                         raise AgentParsingError(error_msg, self.logger)
 
@@ -2019,9 +2295,13 @@ class CodeAgent(MultiStepAgent):
                     )
                 )
 
-                observation, output, memory_step, is_final_answer, execution_outputs_console = self.execute_code(
-                    memory_step, code_action
-                )
+                (
+                    observation,
+                    output,
+                    memory_step,
+                    is_final_answer,
+                    execution_outputs_console,
+                ) = self.execute_code(memory_step, code_action)
 
                 truncated_output = truncate_content(str(output))
                 observation += "Last output from code snippet:\n" + truncated_output
@@ -2038,37 +2318,68 @@ class CodeAgent(MultiStepAgent):
                     take_a_breath()
                 action_output_list.append(output)
 
-            memory_step.model_input_messages = f"model_input_message_list: {model_input_messages_list}"
-            memory_step.model_output_message = f"model_output_message_list: {model_output_message_list}"
+            memory_step.model_input_messages = (
+                f"model_input_message_list: {model_input_messages_list}"
+            )
+            memory_step.model_output_message = (
+                f"model_output_message_list: {model_output_message_list}"
+            )
             memory_step.model_output = f"model_output_list: {model_output_list}"
             memory_step.tool_calls = tool_call_list
             memory_step.observations = f"observation_list: {observation_list}"
             memory_step.action_output = action_output_list
 
             return action_output_list if is_final_answer else None
-        
+
         else:
 
-            memory_messages = self.write_memory_to_messages(summary_mode=True) if memory_messages is None else memory_messages
+            memory_messages = (
+                self.write_memory_to_messages(summary_mode=True)
+                if memory_messages is None
+                else memory_messages
+            )
 
             self.input_messages = memory_messages.copy()
 
             if additional_prompt and self.reflection:
-                self.input_messages.append(Message(role=MessageRole.SYSTEM, content=[{"type": "text", "text": additional_prompt}]))
+                self.input_messages.append(
+                    Message(
+                        role=MessageRole.SYSTEM,
+                        content=[{"type": "text", "text": additional_prompt}],
+                    )
+                )
 
             memory_step.model_input_messages = self.input_messages.copy()
 
             try:
-                
-                additional_args = {"grammar": self.grammar} if self.grammar is not None else {}
+
+                additional_args = (
+                    {"grammar": self.grammar} if self.grammar is not None else {}
+                )
                 if self.use_long_term_memory and self.retrieve_key_memory:
                     if self.Most_Similar is not None:
                         self.input_messages.append(
-                        Message(role=MessageRole.ASSISTANT, content=[{"type": "text", "text": f"This is the most similar historical steps: {self.Most_Similar.strip()}"}])
-                    )
+                            Message(
+                                role=MessageRole.ASSISTANT,
+                                content=[
+                                    {
+                                        "type": "text",
+                                        "text": f"This is the most similar historical steps: {self.Most_Similar.strip()}",
+                                    }
+                                ],
+                            )
+                        )
                     if self.long_term_memory is not None:
                         self.long_term_memory.append(
-                            Message(role=MessageRole.ASSISTANT, content=[{"type": "text", "text": f"This is the long-term memory of the agent of this task: {self.long_term_memory.strip()}"}])
+                            Message(
+                                role=MessageRole.ASSISTANT,
+                                content=[
+                                    {
+                                        "type": "text",
+                                        "text": f"This is the long-term memory of the agent of this task: {self.long_term_memory.strip()}",
+                                    }
+                                ],
+                            )
                         )
                     chat_message: ChatMessage = self.model(
                         self.input_messages,
@@ -2078,7 +2389,15 @@ class CodeAgent(MultiStepAgent):
                 elif self.use_long_term_memory:
                     if self.long_term_memory is not None:
                         self.input_messages.append(
-                            Message(role=MessageRole.ASSISTANT, content=[{"type": "text", "text": f"this is the long-term memory of the agent of this task: {self.long_term_memory.strip()}"}])
+                            Message(
+                                role=MessageRole.ASSISTANT,
+                                content=[
+                                    {
+                                        "type": "text",
+                                        "text": f"this is the long-term memory of the agent of this task: {self.long_term_memory.strip()}",
+                                    }
+                                ],
+                            )
                         )
                     chat_message: ChatMessage = self.model(
                         self.input_messages,
@@ -2088,11 +2407,22 @@ class CodeAgent(MultiStepAgent):
                 elif self.retrieve_key_memory:
                     if self.Most_Similar is not None:
                         self.input_messages.append(
-                        Message(role=MessageRole.ASSISTANT, content=[{"type": "text", "text": f"This is the most similar historical steps: {self.Most_Similar.strip()}"}])
-                    )
+                            Message(
+                                role=MessageRole.ASSISTANT,
+                                content=[
+                                    {
+                                        "type": "text",
+                                        "text": f"This is the most similar historical steps: {self.Most_Similar.strip()}",
+                                    }
+                                ],
+                            )
+                        )
                     chat_message: ChatMessage = self.model(
                         self.input_messages,
-                        stop_sequences=["<end_code>", "Observation:"],  # Define stopping conditions
+                        stop_sequences=[
+                            "<end_code>",
+                            "Observation:",
+                        ],  # Define stopping conditions
                         **additional_args,
                     )
                 else:
@@ -2105,14 +2435,16 @@ class CodeAgent(MultiStepAgent):
                     raise ValueError("Model returned empty or invalid chat message.")
 
                 if isinstance(chat_message.content, list):
-                    model_output = ''.join([str(item) for item in chat_message.content])
+                    model_output = "".join([str(item) for item in chat_message.content])
                 else:
                     model_output = chat_message.content
                 memory_step.model_output_message = chat_message
                 memory_step.model_output = model_output
 
             except Exception as e:
-                raise AgentGenerationError(f"Error in generating model output:\n{e}", self.logger) from e
+                raise AgentGenerationError(
+                    f"Error in generating model output:\n{e}", self.logger
+                ) from e
 
             self.logger.log_markdown(
                 content=model_output,
@@ -2139,9 +2471,13 @@ class CodeAgent(MultiStepAgent):
                 )
             ]
 
-            observation, output, memory_step, is_final_answer, execution_outputs_console = self.execute_code(
-                memory_step, code_action
-            )
+            (
+                observation,
+                output,
+                memory_step,
+                is_final_answer,
+                execution_outputs_console,
+            ) = self.execute_code(memory_step, code_action)
 
             truncated_output = truncate_content(str(output))
             observation += "Last output from code snippet:\n" + truncated_output
@@ -2161,23 +2497,30 @@ class CodeAgent(MultiStepAgent):
             memory_step.action_output = output
 
             return output if is_final_answer else None
-        
-    def track_action_state(self, current_step, search_count, new_search_id, answer_message):
+
+    def track_action_state(
+        self, current_step, search_count, new_search_id, answer_message
+    ):
         error_message = current_step.error.message if current_step.error else None
         return {
-            'search_id': new_search_id,
-            'search_count': search_count,
-            'current_depth': current_step.step_number,
-            'model_output': current_step.model_output,
-            'action_output': current_step.action_output,
-            'error_message': error_message,
-            'observations': current_step.observations,
-            'score': current_step.score,
-            'evaluate_thought': current_step.evaluate_thought,
-            'answer_message': answer_message,
+            "search_id": new_search_id,
+            "search_count": search_count,
+            "current_depth": current_step.step_number,
+            "model_output": current_step.model_output,
+            "action_output": current_step.action_output,
+            "error_message": error_message,
+            "observations": current_step.observations,
+            "score": current_step.score,
+            "evaluate_thought": current_step.evaluate_thought,
+            "answer_message": answer_message,
         }
 
-    def _run(self, task: str, images: List[str] | None = None, additional_knowledge: Optional[str] = None) -> Generator[ActionStep | AgentType, None, None]:
+    def _run(
+        self,
+        task: str,
+        images: List[str] | None = None,
+        additional_knowledge: Optional[str] = None,
+    ) -> Generator[ActionStep | AgentType, None, None]:
         """
         Run the agent to execute a given task using specified search strategies.
 
@@ -2190,31 +2533,39 @@ class CodeAgent(MultiStepAgent):
             ActionStep | AgentType: Steps taken during execution or final result.
         """
         strategy_map = {
-            'BON': self._run_bon_strategy,
-            'BON-wise': self._run_bon_wise_strategy,
-            'Beam-Search': self._run_beam_search_strategy,
-            'Tree-Search': self._run_tree_search_strategy,
-            'default': self._run_baseline_strategy,
+            "BON": self._run_bon_strategy,
+            "BON-wise": self._run_bon_wise_strategy,
+            "Beam-Search": self._run_beam_search_strategy,
+            "Tree-Search": self._run_tree_search_strategy,
+            "default": self._run_baseline_strategy,
         }
         self.step_number = 1
         if self.search_type in strategy_map:
-            yield from strategy_map[self.search_type](task, images, additional_knowledge)
+            yield from strategy_map[self.search_type](
+                task, images, additional_knowledge
+            )
         else:
             raise ValueError(f"Unknown search type: {self.search_type}")
 
-    def _create_planning_step(self, task: str, step_number: int, additional_knowledge: Optional[str] = None):
+    def _create_planning_step(
+        self, task: str, step_number: int, additional_knowledge: Optional[str] = None
+    ):
         planning_step = self.planning_step(
             task,
             is_first_step=(step_number == 1),
             step=step_number,
-            additional_knowledge=additional_knowledge
+            additional_knowledge=additional_knowledge,
         )
         self.logger.log_rule(f"Step {step_number}", level=LogLevel.INFO)
         return planning_step
 
     def _record_action(self, memory_step, step_number, answer_message):
         new_search_id = str(uuid4())[:6]
-        self.action_trajectory.append(self.track_action_state(memory_step, step_number, new_search_id, answer_message))
+        self.action_trajectory.append(
+            self.track_action_state(
+                memory_step, step_number, new_search_id, answer_message
+            )
+        )
 
     def _finalize_with_max_steps_check(self, task, images, memory_steps):
         assert memory_steps is not None, "memory_steps cannot be None"
@@ -2227,7 +2578,7 @@ class CodeAgent(MultiStepAgent):
 
             final_memory_step = ActionStep(
                 step_number=self.step_number,
-                error=AgentMaxStepsError(error_message, self.logger)
+                error=AgentMaxStepsError(error_message, self.logger),
             )
             final_memory_step.action_output = final_answer
             final_memory_step.end_time = time.time()
@@ -2241,21 +2592,30 @@ class CodeAgent(MultiStepAgent):
                     callback(final_memory_step, agent=self)
 
             yield final_memory_step
-    def _final_result_merge(self,final_answer_candidates,mode='list-wise'):
-        if mode=='list-wise':
-            answer_message_picklist = [candidate[2] for candidate in final_answer_candidates]  # 提取所有answer_message
-            text=''
+
+    def _final_result_merge(self, final_answer_candidates, mode="list-wise"):
+        if mode == "list-wise":
+            answer_message_picklist = [
+                candidate[2] for candidate in final_answer_candidates
+            ]  # 提取所有answer_message
+            text = ""
             for idx, trajectory in enumerate(answer_message_picklist):
-                text += f'---Trajectory - {idx}---\n'
-                text += trajectory + '\n'  
+                text += f"---Trajectory - {idx}---\n"
+                text += trajectory + "\n"
             text += "you can start!"
-            _, ind = evaluate_answer(text,system_prompt = self.ORM_list_wise_prompt,mode = 'ORM-list-wise' )
+            _, ind = evaluate_answer(
+                text, system_prompt=self.ORM_list_wise_prompt, mode="ORM-list-wise"
+            )
             if 0 <= int(ind) < len(final_answer_candidates):
-                final_answer = final_answer_candidates[int(ind)][0]  # 获取对应位置的final_answer
-        elif mode=='scoring':
-            final_answer=max(final_answer_candidates, key=lambda x: x[1])[0]
-        elif mode=='voting':
-            answers = [candidate[0] for candidate in final_answer_candidates]  # 提取所有answer_message
+                final_answer = final_answer_candidates[int(ind)][
+                    0
+                ]  # 获取对应位置的final_answer
+        elif mode == "scoring":
+            final_answer = max(final_answer_candidates, key=lambda x: x[1])[0]
+        elif mode == "voting":
+            answers = [
+                candidate[0] for candidate in final_answer_candidates
+            ]  # 提取所有answer_message
             answer_counts = Counter(answers)
             most_common_answer, count = answer_counts.most_common(1)[0]
             # 如果有多数答案，使用多数答案；否则使用模型判断
@@ -2266,34 +2626,37 @@ class CodeAgent(MultiStepAgent):
         else:
             raise ValueError
         return final_answer
-        
 
-    def _verify_process(self,process_candidates,mode='list-wise',select_num=1):
-        best_memory_step=[]
-        if mode=='list-wise':
+    def _verify_process(self, process_candidates, mode="list-wise", select_num=1):
+        best_memory_step = []
+        if mode == "list-wise":
             for _ in range(select_num):
-                answer_message_picklist = [candidate[2] for candidate in process_candidates]  # 提取所有answer_message
+                answer_message_picklist = [
+                    candidate[2] for candidate in process_candidates
+                ]  # 提取所有answer_message
                 text = ""
                 for idx, trajectory in enumerate(answer_message_picklist):
-                    text += f'---Trajectory - {idx}---\n'
-                    text += trajectory + '\n'  
+                    text += f"---Trajectory - {idx}---\n"
+                    text += trajectory + "\n"
                 text += "you can start!"
-                _, ind = evaluate_answer(text,system_prompt = self.PRM_list_wise_prompt,mode = 'PRM-list-wise' )
+                _, ind = evaluate_answer(
+                    text, system_prompt=self.PRM_list_wise_prompt, mode="PRM-list-wise"
+                )
                 if 0 <= int(ind) < len(process_candidates):
-                    best_memory_step.append(process_candidates[int(ind)][0])  # 获取对应位置的final_answer
+                    best_memory_step.append(
+                        process_candidates[int(ind)][0]
+                    )  # 获取对应位置的final_answer
                     process_candidates.pop(int(ind))
-        elif mode=='scoring':
-            best_memory_step=max(process_candidates, key=lambda x: x[1])[:select_num]
+        elif mode == "scoring":
+            best_memory_step = max(process_candidates, key=lambda x: x[1])[:select_num]
         else:
             raise ValueError
-        if len(best_memory_step)==1:
+        if len(best_memory_step) == 1:
             return best_memory_step[0]
-        elif len(best_memory_step)>1:
+        elif len(best_memory_step) > 1:
             return best_memory_step
         else:
             return []
-
-
 
     def _run_bon_strategy(self, task, images, additional_knowledge):
         evaluate = False if self.n_rollouts == 1 else True
@@ -2304,7 +2667,9 @@ class CodeAgent(MultiStepAgent):
             memory_steps = Task_steps.copy()
             task_success = False
             self.step_number = 1
-            planning_step = self._create_planning_step(task, self.step_number, additional_knowledge)
+            planning_step = self._create_planning_step(
+                task, self.step_number, additional_knowledge
+            )
             memory_steps.append(planning_step)
 
             memory_messages = self.write_memory_to_messages(memory_steps=memory_steps)
@@ -2313,21 +2678,30 @@ class CodeAgent(MultiStepAgent):
             while not task_success and step_number <= self.max_steps:
                 try:
                     final_answer, evaluation_score, _ = self.process_step(
-                        step_number, images, memory_messages, memory_steps, evaluate=evaluate)
+                        step_number,
+                        images,
+                        memory_messages,
+                        memory_steps,
+                        evaluate=evaluate,
+                    )
                 except Exception as e:
                     self.logger.log(f"Error in BON step {step_number}: {str(e)}")
                     final_answer = None
-                
+
                 answer_message = self.get_memory_step_message(memory_steps, None)
                 if final_answer:
-                    final_answer=prepare_response(task,memory_messages,self.model)
-                    answer_message += '\n' + 'Final_Answer: ' + final_answer
-                    final_answer_candidates.append((final_answer, evaluation_score,answer_message))
+                    final_answer = prepare_response(task, memory_messages, self.model)
+                    answer_message += "\n" + "Final_Answer: " + final_answer
+                    final_answer_candidates.append(
+                        (final_answer, evaluation_score, answer_message)
+                    )
                     task_success = True
                 else:
                     step_number += 1
 
-        final_answer = self._final_result_merge(final_answer_candidates,mode='list-wise')
+        final_answer = self._final_result_merge(
+            final_answer_candidates, mode="list-wise"
+        )
 
         yield from self._finalize_with_max_steps_check(task, images, memory_steps)
 
@@ -2335,7 +2709,9 @@ class CodeAgent(MultiStepAgent):
 
     def _run_bon_wise_strategy(self, task, images, additional_knowledge):
         memory_steps = self.memory.steps.copy()
-        planning_step = self._create_planning_step(task, self.step_number, additional_knowledge)
+        planning_step = self._create_planning_step(
+            task, self.step_number, additional_knowledge
+        )
         base_memory_steps = memory_steps.copy()
         base_memory_steps.append(planning_step)
         task_success = False
@@ -2345,23 +2721,43 @@ class CodeAgent(MultiStepAgent):
             process_candidates = []
             for i in range(self.n_rollouts):
                 current_memory_steps = copy.deepcopy(base_memory_steps)
-                current_memory_messages = self.write_memory_to_messages(current_memory_steps)
+                current_memory_messages = self.write_memory_to_messages(
+                    current_memory_steps
+                )
                 try:
                     final_answer, evaluation_score, reflection = self.process_step(
-                        self.step_number, images, current_memory_messages, current_memory_steps, '', evaluate)
+                        self.step_number,
+                        images,
+                        current_memory_messages,
+                        current_memory_steps,
+                        "",
+                        evaluate,
+                    )
                 except Exception as e:
-                    self.logger.log(f"Error in BON-wise step {self.step_number}: {str(e)}")
+                    self.logger.log(
+                        f"Error in BON-wise step {self.step_number}: {str(e)}"
+                    )
                     continue
-                answer_message = self.get_memory_step_message(current_memory_steps, None)
-                process_candidates.append((current_memory_steps,evaluation_score,answer_message))
-                self._record_action(current_memory_steps[-1], self.step_number, answer_message)
+                answer_message = self.get_memory_step_message(
+                    current_memory_steps, None
+                )
+                process_candidates.append(
+                    (current_memory_steps, evaluation_score, answer_message)
+                )
+                self._record_action(
+                    current_memory_steps[-1], self.step_number, answer_message
+                )
                 if final_answer:
-                    final_answer=prepare_response(task,current_memory_messages,self.model)
-                    task_success=True
+                    final_answer = prepare_response(
+                        task, current_memory_messages, self.model
+                    )
+                    task_success = True
                     break
-            base_memory_steps=self._verify_process(process_candidates,mode='list-wise')
+            base_memory_steps = self._verify_process(
+                process_candidates, mode="list-wise"
+            )
             self.step_number += 1
-        self.memory.steps=base_memory_steps
+        self.memory.steps = base_memory_steps
 
         yield from self._finalize_with_max_steps_check(task, images, base_memory_steps)
 
@@ -2369,11 +2765,16 @@ class CodeAgent(MultiStepAgent):
 
     def _run_beam_search_strategy(self, task, images, additional_knowledge):
         memory_steps = self.memory.steps.copy()
-        planning_step = self._create_planning_step(task, self.step_number, additional_knowledge)
+        planning_step = self._create_planning_step(
+            task, self.step_number, additional_knowledge
+        )
         memory_steps.append(planning_step)
         base_memory_steps = memory_steps.copy()
-        beam_size=2
-        nodes_list = [base_memory_steps, copy.deepcopy(base_memory_steps)] #beamsize default2
+        beam_size = 2
+        nodes_list = [
+            base_memory_steps,
+            copy.deepcopy(base_memory_steps),
+        ]  # beamsize default2
 
         task_success = False
         evaluate = True
@@ -2381,94 +2782,162 @@ class CodeAgent(MultiStepAgent):
         while not task_success and self.step_number <= self.max_steps:
             process_candidates = []
             for beam_idx in range(beam_size):
-                for i in range(self.n_rollouts//beam_size):  # 对每个节点进行 Branch Size 次扩展
+                for i in range(
+                    self.n_rollouts // beam_size
+                ):  # 对每个节点进行 Branch Size 次扩展
                     # 获取当前节点的 memory_steps 和 memory_messages 副本
-                    current_memory_steps = copy.deepcopy(nodes_list[beam_idx])  # 当前节点
-                    current_memory_messages = self.write_memory_to_messages(current_memory_steps)
+                    current_memory_steps = copy.deepcopy(
+                        nodes_list[beam_idx]
+                    )  # 当前节点
+                    current_memory_messages = self.write_memory_to_messages(
+                        current_memory_steps
+                    )
                     try:
                         final_answer, evaluation_score, reflection = self.process_step(
-                            self.step_number, images, current_memory_messages, current_memory_steps, '', evaluate)
+                            self.step_number,
+                            images,
+                            current_memory_messages,
+                            current_memory_steps,
+                            "",
+                            evaluate,
+                        )
                     except Exception as e:
-                        self.logger.log(f"Error in Beam-Search step {self.step_number}: {str(e)}")
+                        self.logger.log(
+                            f"Error in Beam-Search step {self.step_number}: {str(e)}"
+                        )
                         continue
-                    answer_message = self.get_memory_step_message(current_memory_steps, None)
+                    answer_message = self.get_memory_step_message(
+                        current_memory_steps, None
+                    )
                     if final_answer is not None:
-                        final_answer=prepare_response(task,current_memory_messages,self.model)
-                        answer_message += '\n' + 'Final_Answer: ' + final_answer
-                        final_answer_candidates.append((final_answer, evaluation_score,answer_message))
-                        if len(final_answer_candidates)>=self.n_rollouts:
+                        final_answer = prepare_response(
+                            task, current_memory_messages, self.model
+                        )
+                        answer_message += "\n" + "Final_Answer: " + final_answer
+                        final_answer_candidates.append(
+                            (final_answer, evaluation_score, answer_message)
+                        )
+                        if len(final_answer_candidates) >= self.n_rollouts:
                             task_success = True
                     else:
-                        process_candidates.append((current_memory_steps,evaluation_score,answer_message))
-                        self._record_action(current_memory_steps[-1], self.step_number, answer_message)
-                    
-            base_memory_steps=self._verify_process(process_candidates,mode='list-wise',select_num=beam_size)
-            nodes_list=base_memory_steps
+                        process_candidates.append(
+                            (current_memory_steps, evaluation_score, answer_message)
+                        )
+                        self._record_action(
+                            current_memory_steps[-1], self.step_number, answer_message
+                        )
+
+            base_memory_steps = self._verify_process(
+                process_candidates, mode="list-wise", select_num=beam_size
+            )
+            nodes_list = base_memory_steps
             self.step_number += 1
-        self.memory.steps=current_memory_steps
-        final_answer = self._final_result_merge(final_answer_candidates,mode='list-wise')
-        yield from self._finalize_with_max_steps_check(task, images, current_memory_steps)
+        self.memory.steps = current_memory_steps
+        final_answer = self._final_result_merge(
+            final_answer_candidates, mode="list-wise"
+        )
+        yield from self._finalize_with_max_steps_check(
+            task, images, current_memory_steps
+        )
 
         yield handle_agent_output_types(final_answer)
 
-
     def _run_tree_search_strategy(self, task, images, additional_knowledge):
         memory_steps = self.memory.steps.copy()
-        beam_size=2
-        nodes_list=[]
-        for tree_idx in range(self.n_rollouts//beam_size):
-            planning_step = self._create_planning_step(task, self.step_number, additional_knowledge)
-            nodes_list.append(memory_steps+[planning_step]) #beamsize default2
+        beam_size = 2
+        nodes_list = []
+        for tree_idx in range(self.n_rollouts // beam_size):
+            planning_step = self._create_planning_step(
+                task, self.step_number, additional_knowledge
+            )
+            nodes_list.append(memory_steps + [planning_step])  # beamsize default2
         task_success = False
         evaluate = True
         final_answer_candidates = []
         while not task_success and self.step_number <= self.max_steps:
             for beam_idx in range(beam_size):
                 process_candidates = []
-                for i in range(self.n_rollouts//beam_size):  # 对每个节点进行 Branch Size 次扩展
-                    current_memory_steps = copy.deepcopy(nodes_list[beam_idx]) 
-                    if  not current_memory_steps: 
+                for i in range(
+                    self.n_rollouts // beam_size
+                ):  # 对每个节点进行 Branch Size 次扩展
+                    current_memory_steps = copy.deepcopy(nodes_list[beam_idx])
+                    if not current_memory_steps:
                         self.logger.log(f"this branch have finish its task {beam_idx}")
                         continue
-                    current_memory_messages = self.write_memory_to_messages(current_memory_steps)
+                    current_memory_messages = self.write_memory_to_messages(
+                        current_memory_steps
+                    )
                     try:
                         final_answer, evaluation_score, reflection = self.process_step(
-                            self.step_number, images, current_memory_messages, current_memory_steps, '', evaluate)
+                            self.step_number,
+                            images,
+                            current_memory_messages,
+                            current_memory_steps,
+                            "",
+                            evaluate,
+                        )
                     except Exception as e:
-                        self.logger.log(f"Error in Tree-Search step {self.step_number}: {str(e)}")
+                        self.logger.log(
+                            f"Error in Tree-Search step {self.step_number}: {str(e)}"
+                        )
                         continue
-                    answer_message = self.get_memory_step_message(current_memory_steps, None)
+                    answer_message = self.get_memory_step_message(
+                        current_memory_steps, None
+                    )
                     if final_answer is not None:
-                        final_answer=prepare_response(task,current_memory_messages,self.model)
-                        answer_message += '\n' + 'Final_Answer: ' + final_answer
-                        final_answer_candidates.append((final_answer, evaluation_score,answer_message))
-                        if len(final_answer_candidates)>=self.n_rollouts:
+                        final_answer = prepare_response(
+                            task, current_memory_messages, self.model
+                        )
+                        answer_message += "\n" + "Final_Answer: " + final_answer
+                        final_answer_candidates.append(
+                            (final_answer, evaluation_score, answer_message)
+                        )
+                        if len(final_answer_candidates) >= self.n_rollouts:
                             task_success = True
                     else:
-                        process_candidates.append((current_memory_steps,evaluation_score,answer_message))
-                        self._record_action(current_memory_steps[-1], self.step_number, answer_message)
-                base_memory_steps=self._verify_process(process_candidates,mode='list-wise')
-                nodes_list[beam_idx]=base_memory_steps
+                        process_candidates.append(
+                            (current_memory_steps, evaluation_score, answer_message)
+                        )
+                        self._record_action(
+                            current_memory_steps[-1], self.step_number, answer_message
+                        )
+                base_memory_steps = self._verify_process(
+                    process_candidates, mode="list-wise"
+                )
+                nodes_list[beam_idx] = base_memory_steps
                 self.step_number += 1
-        self.memory.steps=current_memory_steps
-        final_answer = self._final_result_merge(final_answer_candidates,mode='list-wise')
-        yield from self._finalize_with_max_steps_check(task, images, current_memory_steps)
+        self.memory.steps = current_memory_steps
+        final_answer = self._final_result_merge(
+            final_answer_candidates, mode="list-wise"
+        )
+        yield from self._finalize_with_max_steps_check(
+            task, images, current_memory_steps
+        )
         yield handle_agent_output_types(final_answer)
-
 
     def _run_baseline_strategy(self, task, images, additional_knowledge):
 
         memory_steps = self.memory.steps.copy()
 
-        planning_step = self._create_planning_step(task, self.step_number, additional_knowledge)
+        planning_step = self._create_planning_step(
+            task, self.step_number, additional_knowledge
+        )
         memory_steps.append(planning_step)
 
-        current_memory_messages = self.write_memory_to_messages(memory_steps=memory_steps)
-        task_success, reflection = False, ''
+        current_memory_messages = self.write_memory_to_messages(
+            memory_steps=memory_steps
+        )
+        task_success, reflection = False, ""
         evaluate = True if self.reflection else False
         while not task_success and self.step_number <= self.max_steps:
-            if self.planning_interval is not None and self.step_number % self.planning_interval == 0 and self.planning_interval != 1:
-                planning_step = self._create_planning_step(task, self.step_number, additional_knowledge)
+            if (
+                self.planning_interval is not None
+                and self.step_number % self.planning_interval == 0
+                and self.planning_interval != 1
+            ):
+                planning_step = self._create_planning_step(
+                    task, self.step_number, additional_knowledge
+                )
                 memory_steps.append(planning_step)
             try:
                 if not reflection:  # 如果node_dict是空字典
@@ -2477,25 +2946,36 @@ class CodeAgent(MultiStepAgent):
                     node_exp = "\n".join(f"{k}: {v}" for k, v in reflection.items())
                     additional_prompt = self.BASE_ADDITIONAL_PROMPT + f"{node_exp}\n\n"
                 final_answer, _, reflection = self.process_step(
-                    self.step_number, images, current_memory_messages, memory_steps,additional_prompt, evaluate=evaluate)
+                    self.step_number,
+                    images,
+                    current_memory_messages,
+                    memory_steps,
+                    additional_prompt,
+                    evaluate=evaluate,
+                )
                 answer_message = self.get_memory_step_message(memory_steps, None)
 
             except Exception as e:
-                self.logger.log(f"Error in none strategy step {self.step_number}: {str(e)}")
+                self.logger.log(
+                    f"Error in none strategy step {self.step_number}: {str(e)}"
+                )
                 final_answer = None
-                answer_message=''
+                answer_message = ""
 
             if final_answer:
                 task_success = True
 
             self._record_action(memory_steps[-1], self.step_number, answer_message)
             self.step_number += 1
-        final_answer=prepare_response(task,current_memory_messages,self.model)
+        final_answer = prepare_response(task, current_memory_messages, self.model)
         yield from self._finalize_with_max_steps_check(task, images, memory_steps)
         yield handle_agent_output_types(final_answer)
 
-    def get_memory_step_message(self, memory_steps: List[ActionStep | PlanningStep | TaskStep],
-                           current_step: ActionStep | PlanningStep | TaskStep) -> str:
+    def get_memory_step_message(
+        self,
+        memory_steps: List[ActionStep | PlanningStep | TaskStep],
+        current_step: ActionStep | PlanningStep | TaskStep,
+    ) -> str:
         def step_to_string(step: ActionStep | PlanningStep | TaskStep) -> str:
             if isinstance(step, ActionStep):
                 step_info = step.dict()
@@ -2505,7 +2985,8 @@ class CodeAgent(MultiStepAgent):
                     f"  observations: {step.observations}\n"
                     f"  action_output: {step_info['action_output']}\n"
                     f"  model_output: {step_info['model_output']}\n"
-                    f"  error: {step_info['error']}\n"                )
+                    f"  error: {step_info['error']}\n"
+                )
             elif isinstance(step, TaskStep):
                 return (
                     f"[TaskStep]\n"
@@ -2526,7 +3007,7 @@ class CodeAgent(MultiStepAgent):
                 for attr_name, attr_value in step.__dict__.items():
                     step_attrs.append(f"  {attr_name} = {attr_value}")
                 step_attrs_str = "\n".join(step_attrs)
-                return f"[Unknown Step Type: {type(step)}]\n{step_attrs_str}"   
+                return f"[Unknown Step Type: {type(step)}]\n{step_attrs_str}"
 
         if not isinstance(memory_steps, list):
             memory_steps = [memory_steps]
@@ -2551,8 +3032,15 @@ class CodeAgent(MultiStepAgent):
                 texts.append(text)
         return "\n".join(texts)
 
-        
-    def process_step(self, step_number, images, memory_messages, memory_steps, additional_prompt: str = "", evaluate=True):
+    def process_step(
+        self,
+        step_number,
+        images,
+        memory_messages,
+        memory_steps,
+        additional_prompt: str = "",
+        evaluate=True,
+    ):
 
         reflection = None
         self.step_number = step_number
@@ -2562,17 +3050,19 @@ class CodeAgent(MultiStepAgent):
             step_number=self.step_number,
             start_time=step_start_time,
             observations_images=images,
-            score=0.0
+            score=0.0,
         )
 
         final_answer = None
-        evaluation_score = float('-inf')
+        evaluation_score = float("-inf")
 
         try:
             evaluation_content = ""
             answer_message = ""
 
-            final_answer = self.step(memory_step, memory_messages, additional_prompt, memory_steps)
+            final_answer = self.step(
+                memory_step, memory_messages, additional_prompt, memory_steps
+            )
 
             if final_answer is not None and self.final_answer_checks:
                 for check_function in self.final_answer_checks:
@@ -2580,27 +3070,34 @@ class CodeAgent(MultiStepAgent):
                         assert check_function(final_answer, self.memory)
                     except Exception as e:
                         final_answer = None
-                        raise AgentError(f"Check {check_function.__name__} failed with error: {e}", self.logger)
+                        raise AgentError(
+                            f"Check {check_function.__name__} failed with error: {e}",
+                            self.logger,
+                        )
 
             if final_answer is not None:
                 if not isinstance(final_answer, str):
                     final_answer = str(final_answer)
-                mode = 'ORM'
+                mode = "ORM"
                 memory_message = self.get_memory_step_message(memory_steps, memory_step)
                 answer_message = f"{memory_message}\nFinal_Answer: {final_answer}"
                 system_prompt = self.ORM_prompt
             else:
-                mode = 'PRM'
+                mode = "PRM"
                 answer_message = self.get_memory_step_message(memory_steps, memory_step)
                 system_prompt = self.PRM_prompt
 
             if evaluate:
-                evaluation_score, evaluation_content = evaluate_answer(answer_message, system_prompt, mode)
+                evaluation_score, evaluation_content = evaluate_answer(
+                    answer_message, system_prompt, mode
+                )
             else:
                 evaluation_score, evaluation_content = 0.0, ""
 
-            if self.reflection and evaluation_score<=self.reflection_threshold:
-                reflection = evaluate_answer(answer_message, self.REFLECTION_prompt, mode='reflection')
+            if self.reflection and evaluation_score <= self.reflection_threshold:
+                reflection = evaluate_answer(
+                    answer_message, self.REFLECTION_prompt, mode="reflection"
+                )
 
         except AgentError as e:
             memory_step.error = e
@@ -2608,8 +3105,8 @@ class CodeAgent(MultiStepAgent):
             evaluation_content = ""
 
         finally:
-            setattr(memory_step, 'score', evaluation_score)
-            setattr(memory_step, 'evaluate_thought', evaluation_content)
+            setattr(memory_step, "score", evaluation_score)
+            setattr(memory_step, "evaluate_thought", evaluation_content)
 
             memory_step.end_time = time.time()
             memory_step.duration = memory_step.end_time - step_start_time

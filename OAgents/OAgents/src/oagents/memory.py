@@ -80,12 +80,14 @@ class ActionStep(MemoryStep):
     action_output: Any = None
     score: float = 0.0
     evaluate_thought: str | None = None
-    
+
     def dict(self):
         # We overwrite the method to parse the tool_calls and action_output manually
         return {
             "model_input_messages": self.model_input_messages,
-            "tool_calls": [tc.dict() for tc in self.tool_calls] if self.tool_calls else [],
+            "tool_calls": (
+                [tc.dict() for tc in self.tool_calls] if self.tool_calls else []
+            ),
             "start_time": self.start_time,
             "end_time": self.end_time,
             "step": self.step_number,
@@ -99,13 +101,23 @@ class ActionStep(MemoryStep):
             "evaluate_thought": self.evaluate_thought,
         }
 
-    def to_messages(self, summary_mode: bool = False, show_model_input_messages: bool = False, summary: bool = False) -> List[Message]:
+    def to_messages(
+        self,
+        summary_mode: bool = False,
+        show_model_input_messages: bool = False,
+        summary: bool = False,
+    ) -> List[Message]:
         messages = []
         if self.model_input_messages is not None and show_model_input_messages:
-            messages.append(Message(role=MessageRole.SYSTEM, content=self.model_input_messages))
+            messages.append(
+                Message(role=MessageRole.SYSTEM, content=self.model_input_messages)
+            )
         if self.model_output is not None and not summary_mode:
             messages.append(
-                Message(role=MessageRole.ASSISTANT, content=[{"type": "text", "text": self.model_output.strip()}])
+                Message(
+                    role=MessageRole.ASSISTANT,
+                    content=[{"type": "text", "text": self.model_output.strip()}],
+                )
             )
         if self.tool_calls is not None:
             messages.append(
@@ -114,7 +126,8 @@ class ActionStep(MemoryStep):
                     content=[
                         {
                             "type": "text",
-                            "text": "Calling tools:\n" + str([tc.dict() for tc in self.tool_calls]),
+                            "text": "Calling tools:\n"
+                            + str([tc.dict() for tc in self.tool_calls]),
                         }
                     ],
                 )
@@ -135,20 +148,31 @@ class ActionStep(MemoryStep):
         if self.evaluate_thought:
             messages.append(
                 Message(
-                    role=MessageRole.ASSISTANT, content=[{"type": "text", "text": f"score of the action:\n {self.score}\n evalution of the action:\n{self.evaluate_thought},Based on the given score and evaluation,Now let's reflect and improve the action."}]
+                    role=MessageRole.ASSISTANT,
+                    content=[
+                        {
+                            "type": "text",
+                            "text": f"score of the action:\n {self.score}\n evalution of the action:\n{self.evaluate_thought},Based on the given score and evaluation,Now let's reflect and improve the action.",
+                        }
+                    ],
                 )
             )
-          
+
         if self.error is not None:
             error_message = (
                 "Error:\n"
                 + str(self.error)
                 + "\nNow let's retry: take care not to repeat previous errors! If you have retried several times, try a completely different approach.\n"
             )
-            message_content = f"Call id: {self.tool_calls[0].id}\n" if self.tool_calls else ""
+            message_content = (
+                f"Call id: {self.tool_calls[0].id}\n" if self.tool_calls else ""
+            )
             message_content += error_message
             messages.append(
-                Message(role=MessageRole.TOOL_RESPONSE, content=[{"type": "text", "text": message_content}])
+                Message(
+                    role=MessageRole.TOOL_RESPONSE,
+                    content=[{"type": "text", "text": message_content}],
+                )
             )
 
         if self.observations_images:
@@ -168,20 +192,28 @@ class ActionStep(MemoryStep):
         if self.evaluate_thought:
             messages.append(
                 Message(
-                    role=MessageRole.ASSISTANT, content=[{"type": "text", "text": f"score of the action:\n {self.score}\n evalution of the action:\n{self.evaluate_thought},Based on the given score and evaluation,Now let's reflect and improve the action."}]
+                    role=MessageRole.ASSISTANT,
+                    content=[
+                        {
+                            "type": "text",
+                            "text": f"score of the action:\n {self.score}\n evalution of the action:\n{self.evaluate_thought},Based on the given score and evaluation,Now let's reflect and improve the action.",
+                        }
+                    ],
                 )
             )
         if summary:
             summary_content = self._generate_local_summary(messages)
             messages.append(
                 Message(
-                    role=MessageRole.ASSISTANT, 
-                    content=[{"type": "text", "text": f"Step Summary:\n{summary_content}"}]
+                    role=MessageRole.ASSISTANT,
+                    content=[
+                        {"type": "text", "text": f"Step Summary:\n{summary_content}"}
+                    ],
                 )
             )
-            
+
         return messages
-    
+
     def _generate_local_summary(self, messages: List[Message]) -> str:
 
         prompt = (
@@ -195,25 +227,22 @@ class ActionStep(MemoryStep):
         api_base = os.getenv("OPENAI_BASE_URL")
 
         if not api_key or not api_base:
-            raise EnvironmentError("Missing required environment variables for OpenAI API.")
+            raise EnvironmentError(
+                "Missing required environment variables for OpenAI API."
+            )
 
-        client = OpenAI(
-            api_key=api_key,
-            base_url=api_base
-        )
+        client = OpenAI(api_key=api_key, base_url=api_base)
 
         try:
             response = client.chat.completions.create(
-                model="o1",
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                model="o1", messages=[{"role": "user", "content": prompt}]
             )
             summary_content = response.choices[0].message.content
         except Exception as e:
             raise RuntimeError(f"Failed to generate summary via OpenAI: {e}")
 
         return summary_content
+
 
 @dataclass
 class PlanningStep(MemoryStep):
@@ -224,18 +253,24 @@ class PlanningStep(MemoryStep):
     plan: str
 
     def to_messages(self, summary_mode: bool, **kwargs) -> List[Message]:
-        
+
         messages = []
         messages.append(
             Message(
-                role=MessageRole.ASSISTANT, content=[{"type": "text", "text": f"[FACTS LIST]:\n{self.facts.strip()}"}]
+                role=MessageRole.ASSISTANT,
+                content=[
+                    {"type": "text", "text": f"[FACTS LIST]:\n{self.facts.strip()}"}
+                ],
             )
         )
 
-        if not summary_mode:  # This step is not shown to a model writing a plan to avoid influencing the new plan
+        if (
+            not summary_mode
+        ):  # This step is not shown to a model writing a plan to avoid influencing the new plan
             messages.append(
                 Message(
-                    role=MessageRole.ASSISTANT, content=[{"type": "text", "text": f"[PLAN]:\n{self.plan.strip()}"}]
+                    role=MessageRole.ASSISTANT,
+                    content=[{"type": "text", "text": f"[PLAN]:\n{self.plan.strip()}"}],
                 )
             )
         return messages
@@ -247,7 +282,7 @@ class TaskStep(MemoryStep):
     task_images: List[str] | None = None
 
     def to_messages(self, summary_mode: bool = False, **kwargs) -> List[Message]:
-        
+
         content = [{"type": "text", "text": f"New task:\n{self.task}"}]
         if self.task_images:
             for image in self.task_images:
@@ -261,10 +296,15 @@ class SystemPromptStep(MemoryStep):
     system_prompt: str
 
     def to_messages(self, summary_mode: bool = False, **kwargs) -> List[Message]:
-        
+
         if summary_mode:
             return []
-        return [Message(role=MessageRole.SYSTEM, content=[{"type": "text", "text": self.system_prompt}])]
+        return [
+            Message(
+                role=MessageRole.SYSTEM,
+                content=[{"type": "text", "text": self.system_prompt}],
+            )
+        ]
 
 
 class AgentMemory:
@@ -277,7 +317,12 @@ class AgentMemory:
 
     def get_succinct_steps(self) -> list[dict]:
         return [
-            {key: value for key, value in step.dict().items() if key != "model_input_messages"} for step in self.steps
+            {
+                key: value
+                for key, value in step.dict().items()
+                if key != "model_input_messages"
+            }
+            for step in self.steps
         ]
 
     def get_full_steps(self) -> list[dict]:
@@ -294,19 +339,31 @@ class AgentMemory:
         logger.console.log("Replaying the agent's steps:")
         for step in self.steps:
             if isinstance(step, SystemPromptStep) and detailed:
-                logger.log_markdown(title="System prompt", content=step.system_prompt, level=LogLevel.ERROR)
+                logger.log_markdown(
+                    title="System prompt",
+                    content=step.system_prompt,
+                    level=LogLevel.ERROR,
+                )
             elif isinstance(step, TaskStep):
                 logger.log_task(step.task, "", level=LogLevel.ERROR)
             elif isinstance(step, ActionStep):
                 logger.log_rule(f"Step {step.step_number}", level=LogLevel.ERROR)
                 if detailed:
                     logger.log_messages(step.model_input_messages)
-                logger.log_markdown(title="Agent output:", content=step.model_output, level=LogLevel.ERROR)
+                logger.log_markdown(
+                    title="Agent output:",
+                    content=step.model_output,
+                    level=LogLevel.ERROR,
+                )
             elif isinstance(step, PlanningStep):
                 logger.log_rule("Planning step", level=LogLevel.ERROR)
                 if detailed:
                     logger.log_messages(step.model_input_messages, level=LogLevel.ERROR)
-                logger.log_markdown(title="Agent output:", content=step.facts + "\n" + step.plan, level=LogLevel.ERROR)
+                logger.log_markdown(
+                    title="Agent output:",
+                    content=step.facts + "\n" + step.plan,
+                    level=LogLevel.ERROR,
+                )
 
 
 __all__ = ["AgentMemory"]

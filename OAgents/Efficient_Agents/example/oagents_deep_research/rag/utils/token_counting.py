@@ -174,9 +174,7 @@ class OpenAITokenCounter(BaseTokenCounter):
                                     break
                             assert isinstance(image_prefix, str)
                             encoded_image = image_str.split(image_prefix)[1]
-                            image_bytes = BytesIO(
-                                base64.b64decode(encoded_image)
-                            )
+                            image_bytes = BytesIO(base64.b64decode(encoded_image))
                             image = Image.open(image_bytes)
                             num_tokens += self._count_tokens_from_image(
                                 image, OpenAIVisionDetailType(detail)
@@ -229,7 +227,7 @@ class OpenAITokenCounter(BaseTokenCounter):
 
 
 class AnthropicTokenCounter(BaseTokenCounter):
-    @dependencies_required('anthropic')
+    @dependencies_required("anthropic")
     def __init__(self, model: str):
         r"""Constructor for the token counter for Anthropic models.
 
@@ -241,7 +239,7 @@ class AnthropicTokenCounter(BaseTokenCounter):
         self.client = Anthropic()
         self.model = model
 
-    @dependencies_required('anthropic')
+    @dependencies_required("anthropic")
     def count_tokens_from_messages(self, messages: List[OpenAIMessage]) -> int:
         r"""Count number of tokens in the provided message list using
         loaded tokenizer specific for this type of model.
@@ -292,11 +290,11 @@ class GeminiTokenCounter(BaseTokenCounter):
         """
         converted_messages = []
         for message in messages:
-            role = message.get('role')
-            if role == 'assistant':
-                role_to_gemini = 'model'
+            role = message.get("role")
+            if role == "assistant":
+                role_to_gemini = "model"
             else:
-                role_to_gemini = 'user'
+                role_to_gemini = "user"
             converted_message = {
                 "role": role_to_gemini,
                 "parts": message.get("content"),

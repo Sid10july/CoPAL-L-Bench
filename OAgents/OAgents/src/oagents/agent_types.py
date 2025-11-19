@@ -103,7 +103,9 @@ class AgentImage(AgentType, ImageType):
                 self._tensor = torch.from_numpy(value)
 
         if self._path is None and self._raw is None and self._tensor is None:
-            raise TypeError(f"Unsupported type for {self.__class__.__name__}: {type(value)}")
+            raise TypeError(
+                f"Unsupported type for {self.__class__.__name__}: {type(value)}"
+            )
 
     def _ipython_display_(self, include=None, exclude=None):
         """
@@ -248,7 +250,9 @@ _AGENT_TYPE_MAPPING = {"string": AgentText, "image": AgentImage, "audio": AgentA
 
 def handle_agent_input_types(*args, **kwargs):
     args = [(arg.to_raw() if isinstance(arg, AgentType) else arg) for arg in args]
-    kwargs = {k: (v.to_raw() if isinstance(v, AgentType) else v) for k, v in kwargs.items()}
+    kwargs = {
+        k: (v.to_raw() if isinstance(v, AgentType) else v) for k, v in kwargs.items()
+    }
     return args, kwargs
 
 

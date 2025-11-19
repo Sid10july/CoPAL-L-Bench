@@ -41,15 +41,15 @@ def extract_json_objects(text: str) -> list:
     start_index = None
 
     for i, char in enumerate(text):
-        if char == '{':
+        if char == "{":
             if not stack:
                 start_index = i
             stack.append(char)
-        elif char == '}':
+        elif char == "}":
             if stack:
                 stack.pop()
                 if not stack and start_index is not None:
-                    matches.append(text[start_index:i+1])
+                    matches.append(text[start_index : i + 1])
                     start_index = None
     return matches
 
@@ -57,9 +57,9 @@ def extract_json_objects(text: str) -> list:
 def clean_and_parse_json(json_str: str) -> Optional[Dict]:
 
     try:
-        json_str = re.sub(r',\s*\}', '}', json_str)
+        json_str = re.sub(r",\s*\}", "}", json_str)
         json_str = re.sub(r'(?<=\{)\s*([^":]+?)\s*:', r'"\1":', json_str)
-        json_str = re.sub(r'\}\s*$', '}', json_str)
+        json_str = re.sub(r"\}\s*$", "}", json_str)
         return json.loads(json_str)
     except json.JSONDecodeError:
         return None
@@ -73,10 +73,13 @@ def parse_first_valid_json(text: str) -> dict:
             return cleaned
     return {}
 
-async def async_evaluate_answer(text: str, system_prompt: str, mode: str = 'PRM') -> Any:
+
+async def async_evaluate_answer(
+    text: str, system_prompt: str, mode: str = "PRM"
+) -> Any:
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user",   "content": text}
+        {"role": "user", "content": text},
     ]
 
     try:
@@ -88,15 +91,15 @@ async def async_evaluate_answer(text: str, system_prompt: str, mode: str = 'PRM'
         )
         content = response.choices[0].message.content
 
-        if mode in ('ORM', 'PRM'):
+        if mode in ("ORM", "PRM"):
             result = parse_first_valid_json(content)
-            return result.get('score', 0), result.get('analysis', '')
+            return result.get("score", 0), result.get("analysis", "")
 
-        elif mode == 'ORM-list-wise' or 'PRM-list-wise':
+        elif mode == "ORM-list-wise" or "PRM-list-wise":
             result = parse_first_valid_json(content)
-            return result.get('analysis',''), result.get('index', 0)
+            return result.get("analysis", ""), result.get("index", 0)
 
-        elif mode == 'reflection':
+        elif mode == "reflection":
             result = parse_first_valid_json(content)
             return result
 
@@ -108,10 +111,10 @@ async def async_evaluate_answer(text: str, system_prompt: str, mode: str = 'PRM'
         return None
 
 
-def evaluate_answer(text: str, system_prompt: str, mode: str = 'PRM') -> Any:
+def evaluate_answer(text: str, system_prompt: str, mode: str = "PRM") -> Any:
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user",   "content": text}
+        {"role": "user", "content": text},
     ]
 
     try:
@@ -123,13 +126,13 @@ def evaluate_answer(text: str, system_prompt: str, mode: str = 'PRM') -> Any:
         )
         content = response.choices[0].message.content
 
-        if mode in ('ORM', 'PRM'):
+        if mode in ("ORM", "PRM"):
             result = parse_first_valid_json(content)
-            return result.get('score', 0), result.get('analysis', '')
-        elif mode in ('ORM-list-wise', 'PRM-list-wise'):
+            return result.get("score", 0), result.get("analysis", "")
+        elif mode in ("ORM-list-wise", "PRM-list-wise"):
             result = parse_first_valid_json(content)
-            return result.get('analysis',''), result.get('index', 0)
-        elif mode == 'reflection':
+            return result.get("analysis", ""), result.get("index", 0)
+        elif mode == "reflection":
             result = parse_first_valid_json(content)
             return result
 
@@ -139,4 +142,3 @@ def evaluate_answer(text: str, system_prompt: str, mode: str = 'PRM') -> Any:
     except Exception as e:
         print(f"Error processing item: {e}")
         return None
-    

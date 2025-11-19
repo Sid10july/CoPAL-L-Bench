@@ -27,8 +27,16 @@ class HuggingfaceLanguageModel(LanguageModel):
 
         if isinstance(device_map, str) and device_map == "niuload":
             device_map = "auto"
-        if isinstance(device_map, str) and device_map == "auto" and not torch.cuda.is_available():
-            device_map = "mps" if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() else "cpu"
+        if (
+            isinstance(device_map, str)
+            and device_map == "auto"
+            and not torch.cuda.is_available()
+        ):
+            device_map = (
+                "mps"
+                if hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+                else "cpu"
+            )
         if isinstance(device_map, str) and device_map == "mps":
             load_dtype = torch.float16
         else:
@@ -48,7 +56,9 @@ class HuggingfaceLanguageModel(LanguageModel):
                     "t": datetime.datetime.now().isoformat(),
                     "phase": "init",
                     "model": model_name_or_path,
-                    "device_map": device_map if isinstance(device_map, str) else "custom",
+                    "device_map": (
+                        device_map if isinstance(device_map, str) else "custom"
+                    ),
                     "dtype": str(load_dtype),
                 }
             )
@@ -124,7 +134,11 @@ class HuggingfaceLanguageModel(LanguageModel):
         ]
 
         self._log_io(
-            {"t": datetime.datetime.now().isoformat(), "phase": "input", "messages": batch_message_list}
+            {
+                "t": datetime.datetime.now().isoformat(),
+                "phase": "input",
+                "messages": batch_message_list,
+            }
         )
 
         model_input_dict: Mapping[str, torch.Tensor] = (
@@ -151,7 +165,11 @@ class HuggingfaceLanguageModel(LanguageModel):
             )
         except Exception as e:
             self._log_io(
-                {"t": datetime.datetime.now().isoformat(), "phase": "exception", "error": str(e)}
+                {
+                    "t": datetime.datetime.now().isoformat(),
+                    "phase": "exception",
+                    "error": str(e),
+                }
             )
             oom = False
             if torch.cuda.is_available() and isinstance(e, torch.cuda.OutOfMemoryError):
@@ -172,7 +190,11 @@ class HuggingfaceLanguageModel(LanguageModel):
         )
 
         self._log_io(
-            {"t": datetime.datetime.now().isoformat(), "phase": "output", "texts": list(output_str_list)}
+            {
+                "t": datetime.datetime.now().isoformat(),
+                "phase": "output",
+                "texts": list(output_str_list),
+            }
         )
 
         output_list: Sequence[ChatHistoryItem] = [

@@ -65,9 +65,7 @@ class HermesFunctionFormatter(
 
         return tool_calls
 
-    def extract_tool_response(
-        self, message: str
-    ) -> Optional[HermesToolResponse]:
+    def extract_tool_response(self, message: str) -> Optional[HermesToolResponse]:
         r"""Extracts a single tool response from the provided message string.
 
         Args:

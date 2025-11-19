@@ -13,6 +13,7 @@ import os
 MAX_ROWS = 500
 TEXT_LIMIT_DEFAULT = 100000
 
+
 class TextInspectorTool(Tool):
     name = "inspect_file_as_text"
     description = """
@@ -31,7 +32,16 @@ This tool handles the following file extensions: [".html", ".pdb", ".xlsx", ".xl
         },
     }
     output_type = "string"
-    SUPPORTED_EXTS = {".html", ".pdb", ".xlsx", ".xls", ".pdf", ".docx", ".ppt", ".pptx"}
+    SUPPORTED_EXTS = {
+        ".html",
+        ".pdb",
+        ".xlsx",
+        ".xls",
+        ".pdf",
+        ".docx",
+        ".ppt",
+        ".pptx",
+    }
     UNSUPPORTED_EXTS = {".png", ".jpg", ".zip"}
     md_converter = MarkdownConverter()
 
@@ -51,8 +61,7 @@ This tool handles the following file extensions: [".html", ".pdb", ".xlsx", ".xl
         else:
             markdown += str(data)
         return markdown
-    
-    
+
     def _process_file(self, file_path):
         ext = os.path.splitext(file_path)[1].lower()
         handlers: Dict[str, Callable[[str], str]] = {
@@ -68,64 +77,69 @@ This tool handles the following file extensions: [".html", ".pdb", ".xlsx", ".xl
         if ext in handlers:
             return handlers[ext](file_path)
         elif any(ext in unsupported for unsupported in self.UNSUPPORTED_EXTS):
-            raise RuntimeError(f"Cannot use inspect_file_as_text tool with {ext}: use appropriate tool instead!")
+            raise RuntimeError(
+                f"Cannot use inspect_file_as_text tool with {ext}: use appropriate tool instead!"
+            )
         else:
             result = self.md_converter.convert(file_path)
             return result.text_content
-    
+
     def _parse_pdb_file(self, file_path):
         parser = PDB.PDBParser(QUIET=True)
         structure = parser.get_structure("protein", file_path)
-        
+
         atoms = list(structure.get_atoms())
         if len(atoms) < 2:
             return "Error: PDB file contains fewer than two atoms."
-        
+
         atom1, atom2 = atoms[0], atoms[1]
-        distance = atom1 - atom2 
-        
-        return f"First atom: {atom1.get_name()} ({atom1.coord})\n" \
-            f"Second atom: {atom2.get_name()} ({atom2.coord})\n" \
+        distance = atom1 - atom2
+
+        return (
+            f"First atom: {atom1.get_name()} ({atom1.coord})\n"
+            f"Second atom: {atom2.get_name()} ({atom2.coord})\n"
             f"Distance: {distance:.3f} Angstroms ({distance * 100:.0f} pm)"
+        )
 
     def _parse_excel_file(self, file_path, max_rows=MAX_ROWS):
         try:
             workbook = load_workbook(filename=file_path, read_only=True)
             all_sheets_text = []
-            
+
             for sheet_name in workbook.sheetnames:
                 sheet = workbook[sheet_name]
                 result = []
-                
+
                 row_count = 0
                 for row in sheet.iter_rows():
                     if row_count >= max_rows:
                         break
-                        
+
                     row_data = []
                     for cell in row:
-                        cell_value = cell.value if cell.value is not None else ""        
-                        cell_color = "FFFFFF" 
+                        cell_value = cell.value if cell.value is not None else ""
+                        cell_color = "FFFFFF"
                         try:
                             fill = cell.fill
-                            if hasattr(fill, "fgColor") and hasattr(fill.fgColor, "rgb"):
+                            if hasattr(fill, "fgColor") and hasattr(
+                                fill.fgColor, "rgb"
+                            ):
                                 rgb = fill.fgColor.rgb
                                 if rgb and isinstance(rgb, str) and len(rgb) == 8:
                                     cell_color = rgb[2:]
                         except:
                             pass
-                            
-                        row_data.append({
-                            "value": str(cell_value),
-                            "color": cell_color
-                        })
+
+                        row_data.append({"value": str(cell_value), "color": cell_color})
                     result.append(row_data)
                     row_count += 1
-                    
+
                 sheet_text = []
                 num_rows = len(result)
                 num_cols = len(result[0]) if result else 0
-                sheet_text.append(f"Table '{sheet_name}' contains {num_rows} rows {num_cols} column:")
+                sheet_text.append(
+                    f"Table '{sheet_name}' contains {num_rows} rows {num_cols} column:"
+                )
                 for row in result:
                     row_text = ""
                     for cell in row:
@@ -136,13 +150,12 @@ This tool handles the following file extensions: [".html", ".pdb", ".xlsx", ".xl
                         else:
                             row_text += f"{value}({color}) "
                     sheet_text.append(row_text)
-                
+
                 all_sheets_text.append("\n".join(sheet_text))
-            
+
             return "\n\n".join(all_sheets_text)
         except Exception as e:
             raise RuntimeError(f"Error parsing Excel file: {str(e)}")
-
 
     def _parse_ppt_file(self, file_path):
         content = ""
@@ -158,7 +171,7 @@ This tool handles the following file extensions: [".html", ".pdb", ".xlsx", ".xl
             return content.strip()
         except Exception as e:
             raise RuntimeError(f"Error parsing PPT file: {e}")
-        
+
     def _parse_xml(self, file_path):
         try:
             dom = minidom.parse(file_path)
@@ -170,7 +183,7 @@ This tool handles the following file extensions: [".html", ".pdb", ".xlsx", ".xl
             return " ".join(texts).strip()
         except Exception as e:
             raise RuntimeError(f"Error parsing XML file: {str(e)}")
-        
+
     def _parse_csv(self, file_path):
         try:
             with open(file_path, "r") as fr:
@@ -178,7 +191,7 @@ This tool handles the following file extensions: [".html", ".pdb", ".xlsx", ".xl
             return "".join(contents)
         except Exception as e:
             raise RuntimeError(f"Error parsing CSV file: {str(e)}")
-        
+
     def _parse_jsonld(self, file_path):
         try:
             with open(file_path, "r") as f:
@@ -187,7 +200,7 @@ This tool handles the following file extensions: [".html", ".pdb", ".xlsx", ".xl
             return result_text
         except Exception as e:
             raise RuntimeError(f"Error parsing JSON-LD file: {str(e)}")
-    
+
     def forward_initial_exam_mode(self, file_path, question):
         try:
             content = self._process_file(file_path)

@@ -44,7 +44,11 @@ from scripts.async_web_crawler import (
     CrawlerArchiveSearchTool,
     SimpleCrawler,
 )
-from scripts.automodel import get_api_model, process_selected_tasks_param, prepare_model_kwargs
+from scripts.automodel import (
+    get_api_model,
+    process_selected_tasks_param,
+    prepare_model_kwargs,
+)
 
 from smolagents.memory import ActionStep, PlanningStep, TaskStep
 from tqdm import tqdm
@@ -56,21 +60,32 @@ from smolagents import (
 )
 
 # Import utilities for cost tracking
-from smolagents.verify_function import reset_verify_function_cost_tracker, get_cumulative_verify_cost_details
+from smolagents.verify_function import (
+    reset_verify_function_cost_tracker,
+    get_cumulative_verify_cost_details,
+)
+
 # Assuming OpenAIEmbedding is correctly placed for this import path
-from rag.embeddings.openai_embedding import OpenAIEmbedding, EmbeddingModelType 
+from rag.embeddings.openai_embedding import OpenAIEmbedding, EmbeddingModelType
+
 # Import new cost trackers from visual_qa
 from scripts.visual_qa import (
-    reset_idefics_hf_tracker, get_cumulative_idefics_hf_details,
-    reset_visualizer_gpt4o_tracker, get_cumulative_visualizer_gpt4o_details
+    reset_idefics_hf_tracker,
+    get_cumulative_idefics_hf_details,
+    reset_visualizer_gpt4o_tracker,
+    get_cumulative_visualizer_gpt4o_details,
 )
+
 # Import new cost trackers from audio_inspector_tool
 from scripts.audio_inspector_tool import (
-    reset_whisper_cost_tracker, get_cumulative_whisper_cost_details
+    reset_whisper_cost_tracker,
+    get_cumulative_whisper_cost_details,
 )
+
 # Import new cost trackers from visual_inspector_tool
 from scripts.visual_inspector_tool import (
-    reset_visual_inspector_gpt4o_tracker, get_cumulative_visual_inspector_gpt4o_details
+    reset_visual_inspector_gpt4o_tracker,
+    get_cumulative_visual_inspector_gpt4o_details,
 )
 
 AUTHORIZED_IMPORTS = [
@@ -101,12 +116,12 @@ AUTHORIZED_IMPORTS = [
     "random",
     "re",
     "sys",
-    "shutil"
+    "shutil",
 ]
 
 
 parent_dir = os.path.dirname(os.path.dirname(os.getcwd()))
-env_path = os.path.join(parent_dir, '.env')
+env_path = os.path.join(parent_dir, ".env")
 
 load_dotenv(dotenv_path=env_path, override=True)
 login(os.getenv("HF_TOKEN"))
@@ -115,8 +130,11 @@ logger = logging.getLogger(__name__)
 
 jsonl_lock = threading.Lock()
 
-logger.warning("Make sure you deactivated Tailscale VPN, else some URLs will be blocked!")
+logger.warning(
+    "Make sure you deactivated Tailscale VPN, else some URLs will be blocked!"
+)
 custom_role_conversions = {"tool-call": "assistant", "tool-response": "user"}
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -126,31 +144,90 @@ def parse_args():
     parser.add_argument("--run_name", type=str, default="init_run")
     parser.add_argument("--debug", default=False, action="store_true")
     # infer params
-    parser.add_argument('--planning_interval', type=int, default=1, help='Number of rollouts per state.')
-    parser.add_argument("--max_steps", type=int, default=12, help="Maximum number of steps for ReAct agent.")
-    parser.add_argument("--temperature", default=None, type=float, help= "The temperature for llm generation.")
-    parser.add_argument('--top_p', default=None, type=float, help="The top_p for llm generation.")
-    parser.add_argument('--reflection', action='store_true', default=False, help='Enable reflection')
+    parser.add_argument(
+        "--planning_interval", type=int, default=1, help="Number of rollouts per state."
+    )
+    parser.add_argument(
+        "--max_steps",
+        type=int,
+        default=12,
+        help="Maximum number of steps for ReAct agent.",
+    )
+    parser.add_argument(
+        "--temperature",
+        default=None,
+        type=float,
+        help="The temperature for llm generation.",
+    )
+    parser.add_argument(
+        "--top_p", default=None, type=float, help="The top_p for llm generation."
+    )
+    parser.add_argument(
+        "--reflection", action="store_true", default=False, help="Enable reflection"
+    )
     # data selection
-    parser.add_argument("--split", type=str, default="validation", choices=['validation','test'])
-    parser.add_argument("--level", type=str, default="all", choices=["all", "1", "2", "3"])
-    parser.add_argument("--selected-tasks", default=None, nargs='*', help="Tasks to run: specify single or multiple indices (--selected-tasks 1 or --selected-tasks 1 2 5), a single task ID, or a path to a text file with one task ID per line")
+    parser.add_argument(
+        "--split", type=str, default="validation", choices=["validation", "test"]
+    )
+    parser.add_argument(
+        "--level", type=str, default="all", choices=["all", "1", "2", "3"]
+    )
+    parser.add_argument(
+        "--selected-tasks",
+        default=None,
+        nargs="*",
+        help="Tasks to run: specify single or multiple indices (--selected-tasks 1 or --selected-tasks 1 2 5), a single task ID, or a path to a text file with one task ID per line",
+    )
     # search params
-    parser.add_argument('--search_tool_reflection', action='store_true', default=False, help='Enable search tool reflection')
+    parser.add_argument(
+        "--search_tool_reflection",
+        action="store_true",
+        default=False,
+        help="Enable search tool reflection",
+    )
     # plan params
-    parser.add_argument('--subtask', action='store_true', default=False, help='Enable subtask')
-    parser.add_argument('--static_plan', action='store_true', default=False, help='Use static plan')
-    parser.add_argument('--dynamic_update_plan', action='store_true', default=False, help='Use dynamic update plan')
+    parser.add_argument(
+        "--subtask", action="store_true", default=False, help="Enable subtask"
+    )
+    parser.add_argument(
+        "--static_plan", action="store_true", default=False, help="Use static plan"
+    )
+    parser.add_argument(
+        "--dynamic_update_plan",
+        action="store_true",
+        default=False,
+        help="Use dynamic update plan",
+    )
     # memory params
-    parser.add_argument('--summary', action='store_true', default=False, help='Summarize the current step memory')
-    parser.add_argument('--use_long_term_memory', action='store_true', default=False, help='Use long-term memory')
-    parser.add_argument('--retrieve_key_memory', action='store_true', default=False, help='Retrieve key memory')
-    
+    parser.add_argument(
+        "--summary",
+        action="store_true",
+        default=False,
+        help="Summarize the current step memory",
+    )
+    parser.add_argument(
+        "--use_long_term_memory",
+        action="store_true",
+        default=False,
+        help="Use long-term memory",
+    )
+    parser.add_argument(
+        "--retrieve_key_memory",
+        action="store_true",
+        default=False,
+        help="Retrieve key memory",
+    )
+
     return parser.parse_args()
 
+
 def load_gaia_dataset(args):
-    eval_ds = datasets.load_dataset("gaia-benchmark/GAIA", "2023_all", trust_remote_code=True)[args.split]
-    eval_ds = eval_ds.rename_columns({"Question": "question", "Final answer": "true_answer", "Level": "task"})
+    eval_ds = datasets.load_dataset(
+        "gaia-benchmark/GAIA", "2023_all", trust_remote_code=True
+    )[args.split]
+    eval_ds = eval_ds.rename_columns(
+        {"Question": "question", "Final answer": "true_answer", "Level": "task"}
+    )
 
     def preprocess_file_paths(row):
         if len(row["file_name"]) > 0:
@@ -161,13 +238,17 @@ def load_gaia_dataset(args):
     eval_df = pd.DataFrame(eval_ds)
     return eval_df
 
+
 def create_agent_hierarchy(model: Model, model_search: Model, args, debug=False):
     crawler = SimpleCrawler(serpapi_key=os.getenv("SERP_API_KEY"))
     text_limit = 100000
 
-    search_types = ['wiki', 'google', 'baidu', 'bing', 'duckduckgo']
-    search_tools = [SearchTool(search_type=st, reflection=args.search_tool_reflection) for st in search_types]
-    
+    search_types = ["wiki", "google", "baidu", "bing", "duckduckgo"]
+    search_tools = [
+        SearchTool(search_type=st, reflection=args.search_tool_reflection)
+        for st in search_types
+    ]
+
     WEB_TOOLS = [
         CrawlerReadTool(crawler),
         CrawlerArchiveSearchTool(crawler),
@@ -190,16 +271,22 @@ def create_agent_hierarchy(model: Model, model_search: Model, args, debug=False)
     """,
         provide_run_summary=True,
         debug=debug,
-        static_plan=args.static_plan, 
+        static_plan=args.static_plan,
         dynamic_update_plan=args.dynamic_update_plan,
         reflection=args.reflection,
     )
-    text_webbrowser_agent.prompt_templates["managed_agent"]["task"] += """You can navigate to .txt online files.
+    text_webbrowser_agent.prompt_templates["managed_agent"][
+        "task"
+    ] += """You can navigate to .txt online files.
     If a non-html page is in another format, especially .pdf or a Youtube video, use tool 'inspect_file_as_text' to inspect it.
     Additionally, if after some searching you find out that you need more information to answer the question, you can use `final_answer` with your request for clarification as argument to request for more information."""
     manager_agent = CodeAgent(
         model=model,
-        tools=[VisualInspectorTool(model, text_limit), AudioInspectorTool(model, text_limit), TextInspectorTool(model, text_limit)],
+        tools=[
+            VisualInspectorTool(model, text_limit),
+            AudioInspectorTool(model, text_limit),
+            TextInspectorTool(model, text_limit),
+        ],
         max_steps=args.max_steps,
         verbosity_level=2,
         additional_authorized_imports=AUTHORIZED_IMPORTS,
@@ -216,6 +303,7 @@ def create_agent_hierarchy(model: Model, model_search: Model, args, debug=False)
     )
     return manager_agent
 
+
 def append_answer(entry: dict, jsonl_file: str, file_lock) -> None:
     jsonl_file = Path(jsonl_file)
     jsonl_file.parent.mkdir(parents=True, exist_ok=True)
@@ -226,6 +314,7 @@ def append_answer(entry: dict, jsonl_file: str, file_lock) -> None:
     assert os.path.exists(jsonl_file), "File not found!"
     logger.info("Answer exported to file: {}".format(jsonl_file.resolve()))
 
+
 def extract_intermediate_steps(agent):
 
     intermediate_steps = []
@@ -233,24 +322,29 @@ def extract_intermediate_steps(agent):
         memory_step.model_input_messages = None
         step_dict = memory_step.dict()
         if isinstance(memory_step, ActionStep):
-            step_dict['step_type'] = 'action'
-            step_dict.pop('model_output_message', None)
+            step_dict["step_type"] = "action"
+            step_dict.pop("model_output_message", None)
         elif isinstance(memory_step, TaskStep):
-            step_dict['step_type'] = 'task'
+            step_dict["step_type"] = "task"
         elif isinstance(memory_step, PlanningStep):
-            step_dict['step_type'] = 'planning'
-            step_dict.pop('model_output_message_facts', None)
-            step_dict.pop('model_output_message_plan', None)
+            step_dict["step_type"] = "planning"
+            step_dict.pop("model_output_message_facts", None)
+            step_dict.pop("model_output_message_plan", None)
         else:
-            step_dict['step_type'] = 'unknown'
+            step_dict["step_type"] = "unknown"
         intermediate_steps.append(step_dict)
     return intermediate_steps
 
-def answer_single_question(example, args, model_id, model_id_search, answers_file, debug=False, retrieval=False):
+
+def answer_single_question(
+    example, args, model_id, model_id_search, answers_file, debug=False, retrieval=False
+):
 
     text_limit = 100000
     model_name, key, url, model_wrapper = get_api_model(model_id)
-    model_name_search, key_search, url_search, model_wrapper_search = get_api_model(model_id_search)
+    model_name_search, key_search, url_search, model_wrapper_search = get_api_model(
+        model_id_search
+    )
 
     kwargs = prepare_model_kwargs(model_id, args)
     kwargs_search = prepare_model_kwargs(model_id_search, args)
@@ -261,7 +355,7 @@ def answer_single_question(example, args, model_id, model_id_search, answers_fil
         max_completion_tokens=8192,
         api_key=key,
         api_base=url,
-        **kwargs
+        **kwargs,
     )
 
     model_search = model_wrapper_search(
@@ -270,7 +364,7 @@ def answer_single_question(example, args, model_id, model_id_search, answers_fil
         max_completion_tokens=8192,
         api_key=key_search,
         api_base=url_search,
-        **kwargs_search
+        **kwargs_search,
     )
 
     document_inspection_tool = TextInspectorTool(model, text_limit)
@@ -279,23 +373,36 @@ def answer_single_question(example, args, model_id, model_id_search, answers_fil
 
     agent = create_agent_hierarchy(model, model_search, args, debug)
 
-    augmented_question = """You have one question to answer. It is paramount that you provide a correct answer.
+    augmented_question = (
+        """You have one question to answer. It is paramount that you provide a correct answer.
 Give it all you can: I know for a fact that you have access to all the relevant tools to solve it and find the correct answer (the answer does exist). 
 Failure or 'I cannot answer' or 'None found' will not be tolerated, success will be rewarded.
 Run verification steps if that's needed, you must make sure you find the correct answer!
 Here is the task:
-""" + example["question"]
+"""
+        + example["question"]
+    )
 
     if example["file_name"]:
         if ".zip" in example["file_name"]:
             prompt_use_files = "\n\nTo solve the task above, you will have to use these attached files:\n"
             prompt_use_files += get_zip_description(
-                example["file_name"], example["question"], visual_inspection_tool, document_inspection_tool, audio_inspection_tool,
+                example["file_name"],
+                example["question"],
+                visual_inspection_tool,
+                document_inspection_tool,
+                audio_inspection_tool,
             )
         else:
-            prompt_use_files = "\n\nTo solve the task above, you will have to use this attached file:"
+            prompt_use_files = (
+                "\n\nTo solve the task above, you will have to use this attached file:"
+            )
             prompt_use_files += get_single_file_description(
-                example["file_name"], example["question"], visual_inspection_tool, document_inspection_tool, audio_inspection_tool,
+                example["file_name"],
+                example["question"],
+                visual_inspection_tool,
+                document_inspection_tool,
+                audio_inspection_tool,
             )
         augmented_question += prompt_use_files
 
@@ -303,15 +410,25 @@ Here is the task:
     try:
         final_result = agent.run(augmented_question)
         agent_memory = agent.write_memory_to_messages(summary_mode=True)
-        final_result = prepare_response(augmented_question, agent_memory, reformulation_model=model)
+        final_result = prepare_response(
+            augmented_question, agent_memory, reformulation_model=model
+        )
         output = str(final_result)
 
         intermediate_steps = extract_intermediate_steps(agent)
-        
+
         intermediate_steps_check = [str(step) for step in agent.memory.steps]
-        parsing_error = True if any(["AgentParsingError" in step for step in intermediate_steps_check]) else False
-        
-        iteration_limit_exceeded = True if "Agent stopped due to iteration limit or time limit." in output else False
+        parsing_error = (
+            True
+            if any(["AgentParsingError" in step for step in intermediate_steps_check])
+            else False
+        )
+
+        iteration_limit_exceeded = (
+            True
+            if "Agent stopped due to iteration limit or time limit." in output
+            else False
+        )
         raised_exception = False
 
     except Exception as e:
@@ -322,7 +439,7 @@ Here is the task:
         iteration_limit_exceeded = False
         exception = e
         raised_exception = True
-        
+
     end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     annotated_example = {
         "agent_name": model.model_id,
@@ -338,10 +455,10 @@ Here is the task:
         "end_time": end_time,
         "task": example["task"],
         "task_id": example["task_id"],
-        "search_agent_actions": agent.managed_agents['search_agent'].task_records,
+        "search_agent_actions": agent.managed_agents["search_agent"].task_records,
     }
-    
-    # --- Collect and add cost summary --- 
+
+    # --- Collect and add cost summary ---
     all_costs_summary = {}
 
     # 1. Manager Agent Model cost
@@ -357,21 +474,31 @@ Here is the task:
         if hasattr(search_agent.model, "get_cumulative_cost_details"):
             search_agent_model_cost = search_agent.model.get_cumulative_cost_details()
     all_costs_summary["search_agent_model_cost"] = search_agent_model_cost
-    
+
     # Aggregate model costs
-    total_model_prompt_tokens = manager_model_cost.get("total_prompt_tokens", 0) + search_agent_model_cost.get("total_prompt_tokens", 0)
-    total_model_completion_tokens = manager_model_cost.get("total_completion_tokens", 0) + search_agent_model_cost.get("total_completion_tokens", 0)
-    total_model_input_cost = manager_model_cost.get("total_input_cost", 0.0) + search_agent_model_cost.get("total_input_cost", 0.0)
-    total_model_output_cost = manager_model_cost.get("total_output_cost", 0.0) + search_agent_model_cost.get("total_output_cost", 0.0)
-    total_model_cost_val = manager_model_cost.get("total_cost", 0.0) + search_agent_model_cost.get("total_cost", 0.0)
-    
+    total_model_prompt_tokens = manager_model_cost.get(
+        "total_prompt_tokens", 0
+    ) + search_agent_model_cost.get("total_prompt_tokens", 0)
+    total_model_completion_tokens = manager_model_cost.get(
+        "total_completion_tokens", 0
+    ) + search_agent_model_cost.get("total_completion_tokens", 0)
+    total_model_input_cost = manager_model_cost.get(
+        "total_input_cost", 0.0
+    ) + search_agent_model_cost.get("total_input_cost", 0.0)
+    total_model_output_cost = manager_model_cost.get(
+        "total_output_cost", 0.0
+    ) + search_agent_model_cost.get("total_output_cost", 0.0)
+    total_model_cost_val = manager_model_cost.get(
+        "total_cost", 0.0
+    ) + search_agent_model_cost.get("total_cost", 0.0)
+
     all_costs_summary["aggregated_model_cost"] = {
         "total_prompt_tokens": total_model_prompt_tokens,
         "total_completion_tokens": total_model_completion_tokens,
         "total_tokens": total_model_prompt_tokens + total_model_completion_tokens,
         "total_input_cost": round(total_model_input_cost, 6),
         "total_output_cost": round(total_model_output_cost, 6),
-        "total_cost": round(total_model_cost_val, 6)
+        "total_cost": round(total_model_cost_val, 6),
     }
 
     # 3. Verify function cost
@@ -385,14 +512,29 @@ Here is the task:
 
     # Helper function to process tools from an agent
     def collect_embedding_costs_from_agent_tools(agent_instance, agent_name_prefix=""):
-        nonlocal total_embedding_tokens_agg, total_embedding_cost_agg # Allow modification of outer scope variables
-        if hasattr(agent_instance, 'tools'):
+        nonlocal total_embedding_tokens_agg, total_embedding_cost_agg  # Allow modification of outer scope variables
+        if hasattr(agent_instance, "tools"):
             for tool_name, tool_instance in agent_instance.tools.items():
-                if hasattr(tool_instance, "embedding_model") and tool_instance.embedding_model is not None and hasattr(tool_instance.embedding_model, "get_cumulative_embedding_cost_details"):
-                    emb_cost_details = tool_instance.embedding_model.get_cumulative_embedding_cost_details()
-                    embedding_details_list.append({f"{agent_name_prefix}{tool_name}": emb_cost_details})
-                    total_embedding_tokens_agg += emb_cost_details.get("total_embedding_tokens", 0)
-                    total_embedding_cost_agg += emb_cost_details.get("total_embedding_cost", 0.0)
+                if (
+                    hasattr(tool_instance, "embedding_model")
+                    and tool_instance.embedding_model is not None
+                    and hasattr(
+                        tool_instance.embedding_model,
+                        "get_cumulative_embedding_cost_details",
+                    )
+                ):
+                    emb_cost_details = (
+                        tool_instance.embedding_model.get_cumulative_embedding_cost_details()
+                    )
+                    embedding_details_list.append(
+                        {f"{agent_name_prefix}{tool_name}": emb_cost_details}
+                    )
+                    total_embedding_tokens_agg += emb_cost_details.get(
+                        "total_embedding_tokens", 0
+                    )
+                    total_embedding_cost_agg += emb_cost_details.get(
+                        "total_embedding_cost", 0.0
+                    )
                     # Resetting is handled by agent.run() now, so not needed here per tool after collection
 
     # Collect from manager agent's tools
@@ -400,7 +542,9 @@ Here is the task:
 
     # Collect from search agent's tools (if exists)
     if agent.managed_agents and "search_agent" in agent.managed_agents:
-        collect_embedding_costs_from_agent_tools(agent.managed_agents["search_agent"], agent_name_prefix="search_")
+        collect_embedding_costs_from_agent_tools(
+            agent.managed_agents["search_agent"], agent_name_prefix="search_"
+        )
 
     all_costs_summary["embedding_costs_by_tool"] = embedding_details_list
     all_costs_summary["aggregated_embedding_cost"] = {
@@ -415,108 +559,159 @@ Here is the task:
     # 6. VisualQA tool costs
     idefics_hf_costs = get_cumulative_idefics_hf_details()
     visualizer_gpt4o_costs = get_cumulative_visualizer_gpt4o_details()
-    all_costs_summary["visual_qa_idefics_hf_tokens"] = idefics_hf_costs # Only tokens, no direct $ cost here
+    all_costs_summary["visual_qa_idefics_hf_tokens"] = (
+        idefics_hf_costs  # Only tokens, no direct $ cost here
+    )
     all_costs_summary["visual_qa_visualizer_gpt4o_cost"] = visualizer_gpt4o_costs
 
     # 7. Visual Inspector fallback GPT-4o cost
     visual_inspector_fallback_costs = get_cumulative_visual_inspector_gpt4o_details()
-    all_costs_summary["visual_inspector_fallback_gpt4o_cost"] = visual_inspector_fallback_costs
+    all_costs_summary["visual_inspector_fallback_gpt4o_cost"] = (
+        visual_inspector_fallback_costs
+    )
 
     # --- Aggregate all tokens from all sources ---
     grand_total_prompt_tokens = 0
     grand_total_completion_tokens = 0
-    grand_total_overall_tokens = 0 # This will be the sum of all tokens from all components
+    grand_total_overall_tokens = (
+        0  # This will be the sum of all tokens from all components
+    )
 
     # 1. From aggregated_model_cost
-    grand_total_prompt_tokens += all_costs_summary.get("aggregated_model_cost", {}).get("total_prompt_tokens", 0)
-    grand_total_completion_tokens += all_costs_summary.get("aggregated_model_cost", {}).get("total_completion_tokens", 0)
-    grand_total_overall_tokens += all_costs_summary.get("aggregated_model_cost", {}).get("total_tokens", 0)
+    grand_total_prompt_tokens += all_costs_summary.get("aggregated_model_cost", {}).get(
+        "total_prompt_tokens", 0
+    )
+    grand_total_completion_tokens += all_costs_summary.get(
+        "aggregated_model_cost", {}
+    ).get("total_completion_tokens", 0)
+    grand_total_overall_tokens += all_costs_summary.get(
+        "aggregated_model_cost", {}
+    ).get("total_tokens", 0)
 
     # 2. From verify_function_cost
-    grand_total_prompt_tokens += all_costs_summary.get("verify_function_cost", {}).get("total_prompt_tokens", 0)
-    grand_total_completion_tokens += all_costs_summary.get("verify_function_cost", {}).get("total_completion_tokens", 0)
+    grand_total_prompt_tokens += all_costs_summary.get("verify_function_cost", {}).get(
+        "total_prompt_tokens", 0
+    )
+    grand_total_completion_tokens += all_costs_summary.get(
+        "verify_function_cost", {}
+    ).get("total_completion_tokens", 0)
     # Assuming verify_function_cost might not have a pre-calculated 'total_tokens'
-    grand_total_overall_tokens += all_costs_summary.get("verify_function_cost", {}).get("total_prompt_tokens", 0) + \
-                                all_costs_summary.get("verify_function_cost", {}).get("total_completion_tokens", 0)
+    grand_total_overall_tokens += all_costs_summary.get("verify_function_cost", {}).get(
+        "total_prompt_tokens", 0
+    ) + all_costs_summary.get("verify_function_cost", {}).get(
+        "total_completion_tokens", 0
+    )
 
     # 3. From aggregated_embedding_cost
     # Embeddings typically count all processed tokens as 'prompt' or 'total' tokens.
-    embedding_tokens = all_costs_summary.get("aggregated_embedding_cost", {}).get("total_embedding_tokens", 0)
-    grand_total_prompt_tokens += embedding_tokens # Add to prompt tokens as they are input to the embedding model
+    embedding_tokens = all_costs_summary.get("aggregated_embedding_cost", {}).get(
+        "total_embedding_tokens", 0
+    )
+    grand_total_prompt_tokens += embedding_tokens  # Add to prompt tokens as they are input to the embedding model
     grand_total_overall_tokens += embedding_tokens
     # No completion tokens for embeddings in this context
 
     # 4. From visual_qa_idefics_hf_tokens
-    grand_total_prompt_tokens += all_costs_summary.get("visual_qa_idefics_hf_tokens", {}).get("total_prompt_tokens", 0)
-    grand_total_completion_tokens += all_costs_summary.get("visual_qa_idefics_hf_tokens", {}).get("total_completion_tokens", 0)
-    grand_total_overall_tokens += all_costs_summary.get("visual_qa_idefics_hf_tokens", {}).get("total_tokens", 0)
+    grand_total_prompt_tokens += all_costs_summary.get(
+        "visual_qa_idefics_hf_tokens", {}
+    ).get("total_prompt_tokens", 0)
+    grand_total_completion_tokens += all_costs_summary.get(
+        "visual_qa_idefics_hf_tokens", {}
+    ).get("total_completion_tokens", 0)
+    grand_total_overall_tokens += all_costs_summary.get(
+        "visual_qa_idefics_hf_tokens", {}
+    ).get("total_tokens", 0)
 
     # 5. From visual_qa_visualizer_gpt4o_cost
-    grand_total_prompt_tokens += all_costs_summary.get("visual_qa_visualizer_gpt4o_cost", {}).get("total_prompt_tokens", 0)
-    grand_total_completion_tokens += all_costs_summary.get("visual_qa_visualizer_gpt4o_cost", {}).get("total_completion_tokens", 0)
-    grand_total_overall_tokens += all_costs_summary.get("visual_qa_visualizer_gpt4o_cost", {}).get("total_tokens", 0)
-    
+    grand_total_prompt_tokens += all_costs_summary.get(
+        "visual_qa_visualizer_gpt4o_cost", {}
+    ).get("total_prompt_tokens", 0)
+    grand_total_completion_tokens += all_costs_summary.get(
+        "visual_qa_visualizer_gpt4o_cost", {}
+    ).get("total_completion_tokens", 0)
+    grand_total_overall_tokens += all_costs_summary.get(
+        "visual_qa_visualizer_gpt4o_cost", {}
+    ).get("total_tokens", 0)
+
     # 6. From visual_inspector_fallback_gpt4o_cost
-    grand_total_prompt_tokens += all_costs_summary.get("visual_inspector_fallback_gpt4o_cost", {}).get("total_prompt_tokens", 0)
-    grand_total_completion_tokens += all_costs_summary.get("visual_inspector_fallback_gpt4o_cost", {}).get("total_completion_tokens", 0)
-    grand_total_overall_tokens += all_costs_summary.get("visual_inspector_fallback_gpt4o_cost", {}).get("total_tokens", 0)
+    grand_total_prompt_tokens += all_costs_summary.get(
+        "visual_inspector_fallback_gpt4o_cost", {}
+    ).get("total_prompt_tokens", 0)
+    grand_total_completion_tokens += all_costs_summary.get(
+        "visual_inspector_fallback_gpt4o_cost", {}
+    ).get("total_completion_tokens", 0)
+    grand_total_overall_tokens += all_costs_summary.get(
+        "visual_inspector_fallback_gpt4o_cost", {}
+    ).get("total_tokens", 0)
 
     all_costs_summary["grand_total_task_tokens"] = {
         "total_prompt_tokens": grand_total_prompt_tokens,
         "total_completion_tokens": grand_total_completion_tokens,
-        "total_tokens": grand_total_overall_tokens, # This should be the sum of all tokens from all components
+        "total_tokens": grand_total_overall_tokens,  # This should be the sum of all tokens from all components
     }
     # --- End of token aggregation ---
 
     # Grand total cost for the task
     grand_total_cost = (
-        all_costs_summary["aggregated_model_cost"].get("total_cost", 0.0) +
-        all_costs_summary["verify_function_cost"].get("total_cost", 0.0) +
-        all_costs_summary["aggregated_embedding_cost"].get("total_embedding_cost", 0.0) +
-        all_costs_summary["whisper_asr_cost"].get("total_cost", 0.0) +
-        all_costs_summary["visual_qa_visualizer_gpt4o_cost"].get("total_cost", 0.0) +
-        all_costs_summary["visual_inspector_fallback_gpt4o_cost"].get("total_cost", 0.0)
+        all_costs_summary["aggregated_model_cost"].get("total_cost", 0.0)
+        + all_costs_summary["verify_function_cost"].get("total_cost", 0.0)
+        + all_costs_summary["aggregated_embedding_cost"].get(
+            "total_embedding_cost", 0.0
+        )
+        + all_costs_summary["whisper_asr_cost"].get("total_cost", 0.0)
+        + all_costs_summary["visual_qa_visualizer_gpt4o_cost"].get("total_cost", 0.0)
+        + all_costs_summary["visual_inspector_fallback_gpt4o_cost"].get(
+            "total_cost", 0.0
+        )
         # Note: idefics_hf_costs doesn't have a direct $ cost in this setup
     )
     all_costs_summary["grand_total_task_cost"] = round(grand_total_cost, 6)
-    
-    logger.info(f"Task {example['task_id']} Cost Summary: {json.dumps(all_costs_summary, indent=2)}")
+
+    logger.info(
+        f"Task {example['task_id']} Cost Summary: {json.dumps(all_costs_summary, indent=2)}"
+    )
     annotated_example["cost_summary"] = all_costs_summary
     # --- End of cost collection ---
 
     # Prepare the main result example, excluding cost_summary initially
     main_annotated_example = {
-        "agent_name": model.model_id, # Ensure model_id is the correct attribute for agent's name
+        "agent_name": model.model_id,  # Ensure model_id is the correct attribute for agent's name
         "question": example["question"],
-        "augmented_question": augmented_question, # Usually not needed in final slim output
+        "augmented_question": augmented_question,  # Usually not needed in final slim output
         "prediction": output,
         "true_answer": example["true_answer"],
-        "intermediate_steps": intermediate_steps, # Usually not needed in final slim output
+        "intermediate_steps": intermediate_steps,  # Usually not needed in final slim output
         "parsing_error": parsing_error,
         "iteration_limit_exceeded": iteration_limit_exceeded,
         "agent_error": str(exception) if raised_exception else None,
-        "start_time": start_time, # Usually not needed in final slim output
-        "end_time": end_time, # Usually not needed in final slim output
-        "task": example["task"], # Usually not needed in final slim output
+        "start_time": start_time,  # Usually not needed in final slim output
+        "end_time": end_time,  # Usually not needed in final slim output
+        "task": example["task"],  # Usually not needed in final slim output
         "task_id": example["task_id"],
-        "search_agent_actions": agent.managed_agents['search_agent'].task_records, # Usually not needed in final slim output
+        "search_agent_actions": agent.managed_agents[
+            "search_agent"
+        ].task_records,  # Usually not needed in final slim output
     }
-    
+
     # Prepare the cost-specific example
     cost_example = {
         "task_id": example["task_id"],
         "task": example["task"],
-        "agent_name": model.model_id, # Include agent name for context if needed
-        "agent_error": str(exception) if raised_exception else None, # Keep error for context
-        "prediction": output, # Keep prediction for context
-        "true_answer": example["true_answer"], # Keep true_answer for context
-        "cost_summary": all_costs_summary 
+        "agent_name": model.model_id,  # Include agent name for context if needed
+        "agent_error": (
+            str(exception) if raised_exception else None
+        ),  # Keep error for context
+        "prediction": output,  # Keep prediction for context
+        "true_answer": example["true_answer"],  # Keep true_answer for context
+        "cost_summary": all_costs_summary,
     }
-    
+
     append_answer(annotated_example, answers_file, jsonl_lock)
 
 
-def get_examples_to_answer(answers_file, eval_df, selected_tasks=None, level='all', debug=False) -> List[dict]:
+def get_examples_to_answer(
+    answers_file, eval_df, selected_tasks=None, level="all", debug=False
+) -> List[dict]:
     logger.info(f"Loading answers from {answers_file}...")
     try:
         answer_df = pd.read_json(answers_file, lines=True)
@@ -527,20 +722,25 @@ def get_examples_to_answer(answers_file, eval_df, selected_tasks=None, level='al
         logger.info("No usable records! ▶️ Starting new.")
         done_questions = []
 
-    if level == 'all':
+    if level == "all":
         filtered_df = eval_df
     else:
-        filtered_df = eval_df[eval_df['task'] == level]
+        filtered_df = eval_df[eval_df["task"] == level]
 
     if selected_tasks:
         if isinstance(selected_tasks[0], int):
             filtered_df = eval_df.iloc[selected_tasks]
         else:
-            filtered_df = eval_df[eval_df['task_id'].isin(selected_tasks)]
-    
+            filtered_df = eval_df[eval_df["task_id"].isin(selected_tasks)]
+
     if debug:
         done_questions = []
-    return [row.to_dict() for idx, row in filtered_df.iterrows() if row["task_id"] not in done_questions]
+    return [
+        row.to_dict()
+        for idx, row in filtered_df.iterrows()
+        if row["task_id"] not in done_questions
+    ]
+
 
 def main():
     args = parse_args()
@@ -551,18 +751,39 @@ def main():
 
     selected_tasks = process_selected_tasks_param(args.selected_tasks)
     level = args.level
-    tasks_to_run = get_examples_to_answer(answers_file, eval_df, selected_tasks, level, args.debug)
+    tasks_to_run = get_examples_to_answer(
+        answers_file, eval_df, selected_tasks, level, args.debug
+    )
 
     if args.debug or args.concurrency == 1:
         for example in tasks_to_run:
-            answer_single_question(example, args, args.model_id, args.model_id_search, answers_file, args.debug, args.agent_kb)
+            answer_single_question(
+                example,
+                args,
+                args.model_id,
+                args.model_id_search,
+                answers_file,
+                args.debug,
+                args.agent_kb,
+            )
     else:
         with ThreadPoolExecutor(max_workers=args.concurrency) as exe:
             futures = [
-                exe.submit(answer_single_question, example, args, args.model_id, args.model_id_search, answers_file, args.debug, args.agent_kb)
+                exe.submit(
+                    answer_single_question,
+                    example,
+                    args,
+                    args.model_id,
+                    args.model_id_search,
+                    answers_file,
+                    args.debug,
+                    args.agent_kb,
+                )
                 for example in tasks_to_run
             ]
-            for f in tqdm(as_completed(futures), total=len(tasks_to_run), desc="Processing tasks"):
+            for f in tqdm(
+                as_completed(futures), total=len(tasks_to_run), desc="Processing tasks"
+            ):
                 try:
                     f.result()
                 except Exception as e:

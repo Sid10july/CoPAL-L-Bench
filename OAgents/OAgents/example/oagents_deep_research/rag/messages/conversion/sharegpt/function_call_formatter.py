@@ -19,8 +19,8 @@ from rag.messages.conversion import (
     ToolResponse,
 )
 
-CallT = TypeVar('CallT', bound=ToolCall, covariant=True)
-ResponseT = TypeVar('ResponseT', bound=ToolResponse, covariant=True)
+CallT = TypeVar("CallT", bound=ToolCall, covariant=True)
+ResponseT = TypeVar("ResponseT", bound=ToolResponse, covariant=True)
 
 
 class FunctionCallFormatter(ABC, Generic[CallT, ResponseT]):

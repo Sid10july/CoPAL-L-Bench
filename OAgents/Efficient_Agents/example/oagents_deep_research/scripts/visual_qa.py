@@ -28,6 +28,7 @@ idefics_hf_tracker = {
     "api_calls": 0,
 }
 
+
 def reset_idefics_hf_tracker():
     global idefics_hf_tracker
     idefics_hf_tracker = {
@@ -38,12 +39,14 @@ def reset_idefics_hf_tracker():
         "api_calls": 0,
     }
 
+
 def get_cumulative_idefics_hf_details() -> dict:
     return idefics_hf_tracker.copy()
 
+
 # Tracker for the direct gpt-4o call in visualizer function
 visualizer_gpt4o_tracker = {
-    "model_id": "gpt-4o-2024-11-20", # As specified in payload
+    "model_id": "gpt-4o-2024-11-20",  # As specified in payload
     "total_prompt_tokens": 0,
     "total_completion_tokens": 0,
     "total_tokens": 0,
@@ -52,6 +55,7 @@ visualizer_gpt4o_tracker = {
     "total_cost": 0.0,
     "api_calls": 0,
 }
+
 
 def reset_visualizer_gpt4o_tracker():
     global visualizer_gpt4o_tracker
@@ -66,8 +70,10 @@ def reset_visualizer_gpt4o_tracker():
         "api_calls": 0,
     }
 
+
 def get_cumulative_visualizer_gpt4o_details() -> dict:
     return visualizer_gpt4o_tracker.copy()
+
 
 def process_images_and_text(image_path, query, client):
     messages = [
@@ -80,7 +86,9 @@ def process_images_and_text(image_path, query, client):
         },
     ]
 
-    prompt_with_template = idefics_processor.apply_chat_template(messages, add_generation_prompt=True)
+    prompt_with_template = idefics_processor.apply_chat_template(
+        messages, add_generation_prompt=True
+    )
 
     # load images from local directory
 
@@ -91,7 +99,9 @@ def process_images_and_text(image_path, query, client):
 
         # Convert the image to a base64 string
         buffer = BytesIO()
-        image.save(buffer, format="JPEG")  # Use the appropriate format (e.g., JPEG, PNG)
+        image.save(
+            buffer, format="JPEG"
+        )  # Use the appropriate format (e.g., JPEG, PNG)
         base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
         # add string formatting required by the endpoint
@@ -100,7 +110,9 @@ def process_images_and_text(image_path, query, client):
         return image_string
 
     image_string = encode_local_image(image_path)
-    prompt_with_images = prompt_with_template.replace("<image>", "![]({}) ").format(image_string)
+    prompt_with_images = prompt_with_template.replace("<image>", "![]({}) ").format(
+        image_string
+    )
 
     payload = {
         "inputs": prompt_with_images,
@@ -119,35 +131,58 @@ def process_images_and_text(image_path, query, client):
     prompt_tokens = 0
     completion_tokens = 0
     if response_data and isinstance(response_data, dict) and "details" in response_data:
-        if "prefill" in response_data["details"] and isinstance(response_data["details"]["prefill"], list) and len(response_data["details"]["prefill"]) > 0:
+        if (
+            "prefill" in response_data["details"]
+            and isinstance(response_data["details"]["prefill"], list)
+            and len(response_data["details"]["prefill"]) > 0
+        ):
             # Assuming prefill tokens are in the first element's 'tokens' field if it exists
-            if isinstance(response_data["details"]["prefill"][0], dict) and "tokens" in response_data["details"]["prefill"][0]:
-                 prompt_tokens = response_data["details"]["prefill"][0]["tokens"]
+            if (
+                isinstance(response_data["details"]["prefill"][0], dict)
+                and "tokens" in response_data["details"]["prefill"][0]
+            ):
+                prompt_tokens = response_data["details"]["prefill"][0]["tokens"]
         # 'generated_tokens' is often directly available
         completion_tokens = response_data["details"].get("generated_tokens", 0)
-    elif response_data and isinstance(response_data, dict) and "generated_text" in response_data and "inputs" in payload:
+    elif (
+        response_data
+        and isinstance(response_data, dict)
+        and "generated_text" in response_data
+        and "inputs" in payload
+    ):
         # Fallback: estimate based on string length if no direct token count (very rough)
         # This is not a good way to count tokens and should be replaced if possible.
         # prompt_tokens = len(payload["inputs"]) // 4 # Rough estimate
         # completion_tokens = len(response_data["generated_text"]) // 4 # Rough estimate
-        logger.warning("HF InferenceClient token count not directly available in response, relying on generated_tokens or falling back to 0.")
+        logger.warning(
+            "HF InferenceClient token count not directly available in response, relying on generated_tokens or falling back to 0."
+        )
         # If only generated_tokens is available from details, use that. Otherwise, might need to use tokenizer manually if precise counts are needed.
-        if "details" in response_data and "generated_tokens" in response_data["details"]:
-            completion_tokens = response_data["details"].get("generated_tokens",0)
-        else: # Unable to determine tokens
+        if (
+            "details" in response_data
+            and "generated_tokens" in response_data["details"]
+        ):
+            completion_tokens = response_data["details"].get("generated_tokens", 0)
+        else:  # Unable to determine tokens
             prompt_tokens = 0
             completion_tokens = 0
-            logger.warning("Cannot determine prompt or completion tokens for HF idefics call.")
+            logger.warning(
+                "Cannot determine prompt or completion tokens for HF idefics call."
+            )
 
     global idefics_hf_tracker
     idefics_hf_tracker["total_prompt_tokens"] += prompt_tokens
     idefics_hf_tracker["total_completion_tokens"] += completion_tokens
-    idefics_hf_tracker["total_tokens"] += (prompt_tokens + completion_tokens)
+    idefics_hf_tracker["total_tokens"] += prompt_tokens + completion_tokens
     idefics_hf_tracker["api_calls"] += 1
-    logger.debug(f"HF Idefics Call - Prompt Tokens: {prompt_tokens}, Completion Tokens: {completion_tokens}")
-    logger.debug(f"HF Idefics Cumulative - Total Calls: {idefics_hf_tracker['api_calls']}, Total Tokens: {idefics_hf_tracker['total_tokens']}")
+    logger.debug(
+        f"HF Idefics Call - Prompt Tokens: {prompt_tokens}, Completion Tokens: {completion_tokens}"
+    )
+    logger.debug(
+        f"HF Idefics Cumulative - Total Calls: {idefics_hf_tracker['api_calls']}, Total Tokens: {idefics_hf_tracker['total_tokens']}"
+    )
 
-    return response_data.get("generated_text", "") # Return the generated text
+    return response_data.get("generated_text", "")  # Return the generated text
 
 
 # Function to encode the image
@@ -181,7 +216,10 @@ def encode_image(image_path):
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 
-headers = {"Content-Type": "application/json", "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}"}
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
+}
 
 
 def resize_image(image_path):
@@ -201,7 +239,11 @@ class VisualQATool(Tool):
             "description": "The path to the image on which to answer the question",
             "type": "string",
         },
-        "question": {"description": "the question to answer", "type": "string", "nullable": True},
+        "question": {
+            "description": "the question to answer",
+            "type": "string",
+            "nullable": True,
+        },
     }
     output_type = "string"
 
@@ -222,9 +264,7 @@ class VisualQATool(Tool):
                 output = process_images_and_text(new_image_path, question, self.client)
 
         if add_note:
-            output = (
-                f"You did not provide a particular question, so here is a detailed caption for the image: {output}"
-            )
+            output = f"You did not provide a particular question, so here is a detailed caption for the image: {output}"
 
         return output
 
@@ -243,7 +283,9 @@ def visualizer(image_path: str, question: Optional[str] = None) -> str:
         add_note = True
         question = "Please write a detailed caption for this image."
     if not isinstance(image_path, str):
-        raise Exception("You should provide at least `image_path` string argument to this tool!")
+        raise Exception(
+            "You should provide at least `image_path` string argument to this tool!"
+        )
 
     mime_type, _ = mimetypes.guess_type(image_path)
     base64_image = encode_image(image_path)
@@ -255,15 +297,20 @@ def visualizer(image_path: str, question: Optional[str] = None) -> str:
                 "role": "user",
                 "content": [
                     {"type": "text", "text": question},
-                    {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{base64_image}"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{mime_type};base64,{base64_image}"},
+                    },
                 ],
             }
         ],
         "max_tokens": 1000,
     }
     try:
-        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-        response.raise_for_status() # Raise an exception for HTTP errors
+        response = requests.post(
+            "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
+        )
+        response.raise_for_status()  # Raise an exception for HTTP errors
         response_json = response.json()
         output = response_json["choices"][0]["message"]["content"]
 
@@ -274,7 +321,9 @@ def visualizer(image_path: str, question: Optional[str] = None) -> str:
             prompt_tokens = response_json["usage"].get("prompt_tokens", 0)
             completion_tokens = response_json["usage"].get("completion_tokens", 0)
         else:
-            logger.warning("Usage field not found in visualizer gpt-4o response. Cannot track tokens.")
+            logger.warning(
+                "Usage field not found in visualizer gpt-4o response. Cannot track tokens."
+            )
 
         current_input_cost, current_output_cost, current_total_cost = calculate_cost(
             payload["model"], prompt_tokens, completion_tokens, is_embedding=False
@@ -283,12 +332,12 @@ def visualizer(image_path: str, question: Optional[str] = None) -> str:
         global visualizer_gpt4o_tracker
         visualizer_gpt4o_tracker["total_prompt_tokens"] += prompt_tokens
         visualizer_gpt4o_tracker["total_completion_tokens"] += completion_tokens
-        visualizer_gpt4o_tracker["total_tokens"] += (prompt_tokens + completion_tokens)
+        visualizer_gpt4o_tracker["total_tokens"] += prompt_tokens + completion_tokens
         visualizer_gpt4o_tracker["total_input_cost"] += current_input_cost
         visualizer_gpt4o_tracker["total_output_cost"] += current_output_cost
         visualizer_gpt4o_tracker["total_cost"] += current_total_cost
         visualizer_gpt4o_tracker["api_calls"] += 1
-        
+
         logger.debug(
             f"Visualizer GPT-4o Call - Prompt Tokens: {prompt_tokens}, Completion Tokens: {completion_tokens}, "
             f"Input Cost: ${current_input_cost:.6f}, Output Cost: ${current_output_cost:.6f}, Call Total Cost: ${current_total_cost:.6f}"
@@ -299,11 +348,13 @@ def visualizer(image_path: str, question: Optional[str] = None) -> str:
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Visualizer HTTP Request failed: {e}")
-        output="Failed to get response from visualizer API."
+        output = "Failed to get response from visualizer API."
     except (KeyError, IndexError, TypeError) as e:
         # raise Exception(f"Response format unexpected: {response.json()}")
-        logger.error(f"Visualizer API response format error: {e}. Response: {response.text if 'response' in locals() else 'N/A'}")
-        output="None valid question due to unsolvable problem, please set your final answer to Unable to determine."
+        logger.error(
+            f"Visualizer API response format error: {e}. Response: {response.text if 'response' in locals() else 'N/A'}"
+        )
+        output = "None valid question due to unsolvable problem, please set your final answer to Unable to determine."
 
     if add_note:
         output = f"You did not provide a particular question, so here is a detailed caption for the image: {output}"

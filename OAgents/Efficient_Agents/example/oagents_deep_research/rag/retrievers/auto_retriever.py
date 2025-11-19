@@ -81,8 +81,7 @@ class AutoRetriever:
         if self.storage_type == StorageType.MILVUS:
             if self.url_and_api_key is None:
                 raise ValueError(
-                    "URL and API key required for Milvus storage are not"
-                    "provided."
+                    "URL and API key required for Milvus storage are not" "provided."
                 )
             return MilvusStorage(
                 vector_dim=self.embedding_model.get_output_dim(),
@@ -98,13 +97,9 @@ class AutoRetriever:
                 url_and_api_key=self.url_and_api_key,
             )
 
-        raise ValueError(
-            f"Unsupported vector storage type: {self.storage_type}"
-        )
+        raise ValueError(f"Unsupported vector storage type: {self.storage_type}")
 
-    def _collection_name_generator(
-        self, content: Union[str, "Element"]
-    ) -> str:
+    def _collection_name_generator(self, content: Union[str, "Element"]) -> str:
         r"""Generates a valid collection name from a given file path or URL.
 
         Args:
@@ -119,7 +114,7 @@ class AutoRetriever:
         if isinstance(content, Element):
             content = content.metadata.file_directory or str(uuid.uuid4())
 
-        collection_name = re.sub(r'[^a-zA-Z0-9]', '', content)[:20]
+        collection_name = re.sub(r"[^a-zA-Z0-9]", "", content)[:20]
 
         return collection_name
 
@@ -174,9 +169,7 @@ class AutoRetriever:
         elif isinstance(contents, Element):
             contents = [contents]
         elif not isinstance(contents, list):
-            raise ValueError(
-                "contents must be a string, Element, or a list of them."
-            )
+            raise ValueError("contents must be a string, Element, or a list of them.")
         all_retrieved_info = []
         for content in contents:
             # Generate a valid collection name
@@ -211,24 +204,20 @@ class AutoRetriever:
         # Split records into those with and without a 'similarity_score'
         # Records with 'similarity_score' lower than 'similarity_threshold'
         # will not have a 'similarity_score' in the output content
-        with_score = [
-            info for info in all_retrieved_info if 'similarity score' in info
-        ]
+        with_score = [info for info in all_retrieved_info if "similarity score" in info]
         without_score = [
-            info
-            for info in all_retrieved_info
-            if 'similarity score' not in info
+            info for info in all_retrieved_info if "similarity score" not in info
         ]
         # Sort only the list with scores
         with_score_sorted = sorted(
-            with_score, key=lambda x: x['similarity score'], reverse=True
+            with_score, key=lambda x: x["similarity score"], reverse=True
         )
         # Merge back the sorted scored items with the non-scored items
         all_retrieved_info_sorted = with_score_sorted + without_score
         # Select the 'top_k' results
         all_retrieved_info = all_retrieved_info_sorted[:top_k]
 
-        text_retrieved_info = [item['text'] for item in all_retrieved_info]
+        text_retrieved_info = [item["text"] for item in all_retrieved_info]
 
         detailed_info = {
             "Original Query": query,

@@ -34,36 +34,36 @@ class BaseSearcher:
             if self.history[i][0] == url:
                 return f"You previously visited this page {round(time.time() - self.history[i][1])} seconds ago.\n"
         return ""
-    
 
-    def _to_content(self, query:str, snippets:List):
+    def _to_content(self, query: str, snippets: List):
         web_snippets = []
-        idx=1
+        idx = 1
         for search_info in snippets:
-            redacted_version = f"{idx}. [{search_info['title']}]({search_info['link']})" + \
-                            f"{search_info['date']}{search_info['source']}\n{self._pre_visit(search_info['link'])}{search_info['snippet']}"
+            redacted_version = (
+                f"{idx}. [{search_info['title']}]({search_info['link']})"
+                + f"{search_info['date']}{search_info['source']}\n{self._pre_visit(search_info['link'])}{search_info['snippet']}"
+            )
 
-            redacted_version = redacted_version.replace("Your browser can't play this video.", "")
+            redacted_version = redacted_version.replace(
+                "Your browser can't play this video.", ""
+            )
             web_snippets.append(redacted_version)
-            idx+=1
-        
+            idx += 1
+
         content = (
             f"A Search through {self.name} for '{query}' found {len(web_snippets)} results:\n\n## Web Results\n"
             + "\n\n".join(web_snippets)
         )
         return content
-    
+
     def search(self):
         NotImplemented
 
 
-
 class SerpSearcher(BaseSearcher):
-    def __init__(self,
-                 engine:str="google",
-                 api_key:str=None,
-                 max_results:int=10
-                 ):
+    def __init__(
+        self, engine: str = "google", api_key: str = None, max_results: int = 10
+    ):
         super().__init__()
         self.engine = engine
 
@@ -73,11 +73,10 @@ class SerpSearcher(BaseSearcher):
         self.serpapi_key = api_key or os.getenv("SERP_API_KEY")
         self.serp_num = max_results
 
-
     def search(self, query: str, filter_year: Optional[int] = None) -> List[str]:
         if self.serpapi_key is None:
             raise ValueError("Missing SerpAPI key.")
-        
+
         self.history.append((query, time.time()))
 
         params = {
@@ -86,34 +85,39 @@ class SerpSearcher(BaseSearcher):
         }
 
         if filter_year is not None:
-            params["tbs"] = f"cdr:1,cd_min:01/01/{filter_year},cd_max:12/31/{filter_year}"
+            params["tbs"] = (
+                f"cdr:1,cd_min:01/01/{filter_year},cd_max:12/31/{filter_year}"
+            )
 
-        if self.engine == 'google':
-            params['q'] = query
-            params['num'] = self.serp_num
+        if self.engine == "google":
+            params["q"] = query
+            params["num"] = self.serp_num
             search = GoogleSearch(params)
-        elif self.engine == 'bing':
-            params['q'] = query
-            params['count'] = self.serp_num
+        elif self.engine == "bing":
+            params["q"] = query
+            params["count"] = self.serp_num
             search = BingSearch(params)
-        elif self.engine == 'baidu':
-            params['q'] = query
-            params['rn'] = self.serp_num
+        elif self.engine == "baidu":
+            params["q"] = query
+            params["rn"] = self.serp_num
             search = BaiduSearch(params)
-        elif self.engine=='yahoo':
-            params['p'] = query
+        elif self.engine == "yahoo":
+            params["p"] = query
             search = YahooSearch(params)
         else:
             raise ValueError("Unsupport Serp Engine! Please check your parameters!")
 
-
         results = search.get_dict()
-    
+
         self.page_title = f"{query} - Search"
         if "organic_results" not in results.keys():
-            raise Exception(f"No results found for query: '{query}'. Use a less specific query.")
+            raise Exception(
+                f"No results found for query: '{query}'. Use a less specific query."
+            )
         if len(results["organic_results"]) == 0:
-            year_filter_message = f" with filter year={filter_year}" if filter_year is not None else ""
+            year_filter_message = (
+                f" with filter year={filter_year}" if filter_year is not None else ""
+            )
             return f"No results found for '{query}'{year_filter_message}. Try with a more general query, or remove the year filter."
 
         web_snippets: List[str] = list()
@@ -139,9 +143,9 @@ class SerpSearcher(BaseSearcher):
                     "date": date_published,
                     "snippet": snippet,
                     "source": source,
-                    "link": page['link']
+                    "link": page["link"],
                 }
-                
+
                 web_snippets.append(_search_result)
 
         return web_snippets
@@ -152,8 +156,8 @@ class WikiSearcher(BaseSearcher):
         super().__init__()
         self.name = "wiki_search"
         self.description = "Call this tool to perform a Wikipedia search. Provide a query string for the information you want to retrieve from Wikipedia."
-        
-    def search(self, query:str, filter_year: Optional[int] = None):
+
+    def search(self, query: str, filter_year: Optional[int] = None):
         base_url = "https://en.wikipedia.org/w/api.php"
         params = {
             "action": "query",
@@ -163,15 +167,15 @@ class WikiSearcher(BaseSearcher):
             "explaintext": True,
             "titles": query,
             "redirects": 1,
-            "inprop": "url"
+            "inprop": "url",
         }
         try:
             response = requests.get(base_url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
 
-            if 'error' in data:
-                error_info = data['error']
+            if "error" in data:
+                error_info = data["error"]
                 return f"Wikipedia API error: {error_info.get('code', 'unknown')} - {error_info.get('info', 'unknown')}"
 
             pages = data.get("query", {}).get("pages", {})
@@ -190,7 +194,7 @@ class WikiSearcher(BaseSearcher):
                     "date": "",
                     "snippet": extract,
                     "source": "",
-                    "link": page_url
+                    "link": page_url,
                 }
                 results.append(result)
                 idx += 1
@@ -209,8 +213,7 @@ class WikiSearcher(BaseSearcher):
 
 
 class BochaSearcher(BaseSearcher):
-    def __init__(self,
-                 api_key:str=None):
+    def __init__(self, api_key: str = None):
         super().__init__()
 
         self.api_key = api_key or os.getenv("BOCHA_API_KEY")
@@ -220,34 +223,31 @@ class BochaSearcher(BaseSearcher):
     def search(self, query: str, filter_year: Optional[int] = None) -> None:
         if self.api_key is None:
             raise ValueError("Missing SerpAPI key.")
-        
+
         url = "https://api.bochaai.com/v1/web-search"
-        payload = json.dumps({
-                    "query": query,
-                    "summary": True,
-                    "count": 10,
-                    "page": 1
-                    })
+        payload = json.dumps({"query": query, "summary": True, "count": 10, "page": 1})
         # api_key=self.api_key
         headers = {
-                    'Authorization': f'Bearer {self.api_key}',
-                    'Content-Type': 'application/json'
-                    }
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
 
         response = requests.request("POST", url, headers=headers, data=payload)
         # print(response.json())
-        result=response.json()
+        result = response.json()
 
         self.page_title = f"{query} - Search"
 
-        if result['code']!=200:
-            raise Exception(f"No results found for query: '{query}'. Use a less specific query.")
-        
-        page_result=result['data']['webPages']
-        
+        if result["code"] != 200:
+            raise Exception(
+                f"No results found for query: '{query}'. Use a less specific query."
+            )
+
+        page_result = result["data"]["webPages"]
+
         web_snippets: List[str] = list()
-        idx=0
-        for page in page_result['value']:
+        idx = 0
+        for page in page_result["value"]:
             idx += 1
             date_published = ""
             if "dateLastCrawled" in page:
@@ -267,7 +267,7 @@ class BochaSearcher(BaseSearcher):
                 "date": date_published,
                 "snippet": snippet,
                 "source": source,
-                "link": page['url']
+                "link": page["url"],
             }
 
             web_snippets.append(_search_result)
@@ -276,8 +276,7 @@ class BochaSearcher(BaseSearcher):
 
 
 class DuckDuckGoSearcher(BaseSearcher):
-    def __init__(self, 
-                 max_results:int=5):
+    def __init__(self, max_results: int = 5):
         super().__init__()
         self.max_results = max_results
 
@@ -290,7 +289,7 @@ dictionaries, each representing a search result."""
 
     def search(
         self, query: str, filter_year: Optional[int] = None, source: str = "text"
-        ) -> List[Dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
 
         from duckduckgo_search import DDGS
         from requests.exceptions import RequestException
@@ -312,8 +311,8 @@ dictionaries, each representing a search result."""
                     "title": result["title"],
                     "snippet": result["body"],
                     "link": result["href"],
-                    "source": '',
-                    "date": ''
+                    "source": "",
+                    "date": "",
                 }
                 responses.append(response)
 
@@ -359,12 +358,14 @@ dictionaries, each representing a search result."""
             - Additionally, when looking for books, consider searching for publicly available full-text PDFs, which can be searched entirely at once using document tools for relevant content.
         """
         return responses
-    
+
 
 class SearchTool(Tool):
     name = "web_search"
     description = "Perform a web search query (think a google search) and returns the search results."
-    inputs = {"query": {"type": "string", "description": "The web search query to perform."}}
+    inputs = {
+        "query": {"type": "string", "description": "The web search query to perform."}
+    }
     inputs["filter_year"] = {
         "type": "string",
         "description": "[Optional parameter]: filter the search results to only include pages from a specific year. For example, '2020' will only include pages from 2020. Make sure to use this parameter if you're trying to search for articles from a specific date!",
@@ -372,30 +373,45 @@ class SearchTool(Tool):
     }
     output_type = "string"
 
-    def __init__(self, 
-                 search_type:str='google', 
-                 serp_num:int=5,
-                 reflection:bool=False):
-        
+    def __init__(
+        self, search_type: str = "google", serp_num: int = 5, reflection: bool = False
+    ):
+
         super().__init__()
         self.reflection = reflection
 
-        self.allowed_search_types = ['google', 'bing', 'bocha', 'baidu', 'wiki', 'yahoo', 'duckduckgo']
-        
+        self.allowed_search_types = [
+            "google",
+            "bing",
+            "bocha",
+            "baidu",
+            "wiki",
+            "yahoo",
+            "duckduckgo",
+        ]
+
         if search_type not in self.allowed_search_types:
-            raise ValueError(f"Invalid search_type. It must be one of {self.allowed_search_types}")
-        
-        if search_type in ['google', 'bing', 'baidu', 'yahoo']:
-            self.searcher = SerpSearcher(engine=search_type, api_key=os.getenv("SERP_API_KEY"), max_results=serp_num)
-        elif search_type == 'wiki':
+            raise ValueError(
+                f"Invalid search_type. It must be one of {self.allowed_search_types}"
+            )
+
+        if search_type in ["google", "bing", "baidu", "yahoo"]:
+            self.searcher = SerpSearcher(
+                engine=search_type,
+                api_key=os.getenv("SERP_API_KEY"),
+                max_results=serp_num,
+            )
+        elif search_type == "wiki":
             self.searcher = WikiSearcher()
-        elif search_type == 'bocha':
+        elif search_type == "bocha":
             self.searcher = BochaSearcher(api_key=os.getenv("BOCHA_API_KEY"))
-        elif search_type == 'duckduckgo':
+        elif search_type == "duckduckgo":
             self.searcher = DuckDuckGoSearcher(max_results=serp_num)
         else:
-            self.searcher = SerpSearcher(engine='google', api_key=os.getenv("SERP_API_KEY"), max_results=serp_num)
-                
+            self.searcher = SerpSearcher(
+                engine="google", api_key=os.getenv("SERP_API_KEY"), max_results=serp_num
+            )
+
         self.name = self.searcher.name
         self.description = self.searcher.description
 
@@ -412,23 +428,23 @@ class SearchTool(Tool):
             return str(results)
 
 
-
 class MultiSourceSearchTool(Tool):
     name = "web_search"
     description = "Perform a web search query (think a google search) and returns the search results."
-    inputs = {"query": {"type": "string", "description": "The web search query to perform."}}
+    inputs = {
+        "query": {"type": "string", "description": "The web search query to perform."}
+    }
     inputs["filter_year"] = {
         "type": "string",
         "description": "[Optional parameter]: filter the search results to only include pages from a specific year. For example, '2020' will only include pages from 2020. Make sure to use this parameter if you're trying to search for articles from a specific date!",
         "nullable": True,
     }
     output_type = "string"
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.searchers = []
 
-    def forward(self, query:str):
+    def forward(self, query: str):
         pass
-

@@ -52,8 +52,7 @@ class AzureBlobStorage(BaseObjectStorage):
         from azure.storage.blob import ContainerClient
 
         self._client = ContainerClient(
-            account_url="https://"
-            f"{storage_account_name}.blob.core.windows.net",
+            account_url="https://" f"{storage_account_name}.blob.core.windows.net",
             credential=access_key,
             container_name=container_name,
         )
@@ -108,9 +107,7 @@ class AzureBlobStorage(BaseObjectStorage):
             file_key (str): The path to the object in the container.
             file (File): The file to be uploaded.
         """
-        self._client.upload_blob(
-            name=file_key, data=file.raw_bytes, overwrite=True
-        )
+        self._client.upload_blob(name=file_key, data=file.raw_bytes, overwrite=True)
 
     def _get_file(self, file_key: str, filename: str) -> File:
         r"""Get a file from the Azure Blob Storage container.
@@ -126,9 +123,7 @@ class AzureBlobStorage(BaseObjectStorage):
         file = File.create_file_from_raw_bytes(raw_bytes, filename)
         return file
 
-    def _upload_file(
-        self, local_file_path: Path, remote_file_key: str
-    ) -> None:
+    def _upload_file(self, local_file_path: Path, remote_file_key: str) -> None:
         r"""Upload a local file to the Azure Blob Storage container.
 
         Args:
@@ -136,13 +131,9 @@ class AzureBlobStorage(BaseObjectStorage):
             remote_file_key (str): The path to the object in the container.
         """
         with open(local_file_path, "rb") as f:
-            self._client.upload_blob(
-                name=remote_file_key, data=f, overwrite=True
-            )
+            self._client.upload_blob(name=remote_file_key, data=f, overwrite=True)
 
-    def _download_file(
-        self, local_file_path: Path, remote_file_key: str
-    ) -> None:
+    def _download_file(self, local_file_path: Path, remote_file_key: str) -> None:
         r"""Download a file from the Azure Blob Storage container to the local
         system.
 

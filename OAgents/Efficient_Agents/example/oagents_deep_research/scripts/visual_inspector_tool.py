@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 # Tracker for fallback GPT-4o calls within VisualInspectorTool
 visual_inspector_gpt4o_tracker = {
-    "model_id": "gpt-4o-2024-11-20", # Fallback model
+    "model_id": "gpt-4o-2024-11-20",  # Fallback model
     "total_prompt_tokens": 0,
     "total_completion_tokens": 0,
     "total_tokens": 0,
@@ -45,6 +45,7 @@ visual_inspector_gpt4o_tracker = {
     "total_cost": 0.0,
     "api_calls": 0,
 }
+
 
 def reset_visual_inspector_gpt4o_tracker():
     global visual_inspector_gpt4o_tracker
@@ -59,8 +60,10 @@ def reset_visual_inspector_gpt4o_tracker():
         "api_calls": 0,
     }
 
+
 def get_cumulative_visual_inspector_gpt4o_details() -> dict:
     return visual_inspector_gpt4o_tracker.copy()
+
 
 class VisualInspectorTool(Tool):
     name = "inspect_file_as_image"
@@ -89,8 +92,13 @@ This tool supports the following image formats: [".jpg", ".jpeg", ".png", ".gif"
         self.gpt_url = os.getenv("OPENAI_BASE_URL")
 
     def _validate_file_type(self, file_path: str):
-        if not any(file_path.lower().endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp"]):
-            raise ValueError("Unsupported file type. Use the appropriate tool for text/audio files.")
+        if not any(
+            file_path.lower().endswith(ext)
+            for ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
+        ):
+            raise ValueError(
+                "Unsupported file type. Use the appropriate tool for text/audio files."
+            )
 
     def _resize_image(self, image_path: str) -> str:
         img = Image.open(image_path)
@@ -128,10 +136,9 @@ This tool supports the following image formats: [".jpg", ".jpeg", ".png", ".gif"
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode("utf-8")
 
-
     def forward(self, file_path: str, question: Optional[str] = None) -> str:
         self._validate_file_type(file_path)
-        
+
         if not question:
             question = "Please write a detailed caption for this image."
         try:
@@ -144,7 +151,12 @@ This tool supports the following image formats: [".jpg", ".jpeg", ".png", ".gif"
                         "role": "user",
                         "content": [
                             {"type": "text", "text": question},
-                            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{base64_image}"}},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{mime_type};base64,{base64_image}"
+                                },
+                            },
                         ],
                     }
                 ],
@@ -154,13 +166,11 @@ This tool supports the following image formats: [".jpg", ".jpeg", ".png", ".gif"
 
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.gpt_key}"
+                "Authorization": f"Bearer {self.gpt_key}",
             }
 
             response = requests.post(
-                f"{self.gpt_url}/chat/completions",
-                headers=headers,
-                json=payload
+                f"{self.gpt_url}/chat/completions", headers=headers, json=payload
             )
             response.raise_for_status()
             description = response.json()["choices"][0]["message"]["content"]
@@ -172,21 +182,32 @@ This tool supports the following image formats: [".jpg", ".jpeg", ".png", ".gif"
                 prompt_tokens = response_json["usage"].get("prompt_tokens", 0)
                 completion_tokens = response_json["usage"].get("completion_tokens", 0)
             else:
-                logger.warning("Usage field not found in VisualInspectorTool fallback gpt-4o response. Cannot track tokens.")
+                logger.warning(
+                    "Usage field not found in VisualInspectorTool fallback gpt-4o response. Cannot track tokens."
+                )
 
-            current_input_cost, current_output_cost, current_total_cost = calculate_cost(
-                payload["model"], prompt_tokens, completion_tokens, is_embedding=False
+            current_input_cost, current_output_cost, current_total_cost = (
+                calculate_cost(
+                    payload["model"],
+                    prompt_tokens,
+                    completion_tokens,
+                    is_embedding=False,
+                )
             )
 
             global visual_inspector_gpt4o_tracker
             visual_inspector_gpt4o_tracker["total_prompt_tokens"] += prompt_tokens
-            visual_inspector_gpt4o_tracker["total_completion_tokens"] += completion_tokens
-            visual_inspector_gpt4o_tracker["total_tokens"] += (prompt_tokens + completion_tokens)
+            visual_inspector_gpt4o_tracker[
+                "total_completion_tokens"
+            ] += completion_tokens
+            visual_inspector_gpt4o_tracker["total_tokens"] += (
+                prompt_tokens + completion_tokens
+            )
             visual_inspector_gpt4o_tracker["total_input_cost"] += current_input_cost
             visual_inspector_gpt4o_tracker["total_output_cost"] += current_output_cost
             visual_inspector_gpt4o_tracker["total_cost"] += current_total_cost
             visual_inspector_gpt4o_tracker["api_calls"] += 1
-            
+
             logger.debug(
                 f"VisualInspectorTool Fallback GPT-4o Call - Prompt Tokens: {prompt_tokens}, Completion Tokens: {completion_tokens}, "
                 f"Input Cost: ${current_input_cost:.6f}, Output Cost: ${current_output_cost:.6f}, Call Total Cost: ${current_total_cost:.6f}"

@@ -19,7 +19,15 @@ import os
 
 from dotenv import load_dotenv
 
-from smolagents import CodeAgent, HfApiModel, LiteLLMModel, Model, OpenAIServerModel, Tool, TransformersModel
+from smolagents import (
+    CodeAgent,
+    HfApiModel,
+    LiteLLMModel,
+    Model,
+    OpenAIServerModel,
+    Tool,
+    TransformersModel,
+)
 from smolagents.default_tools import TOOL_MAPPING
 
 
@@ -81,7 +89,9 @@ def load_model(model_type: str, model_id: str) -> Model:
             api_key=os.getenv("OPENAI_API_KEY"),
         )
     elif model_type == "TransformersModel":
-        return TransformersModel(model_id=model_id, device_map="auto", flatten_messages_as_text=False)
+        return TransformersModel(
+            model_id=model_id, device_map="auto", flatten_messages_as_text=False
+        )
     elif model_type == "HfApiModel":
         return HfApiModel(
             token=os.getenv("HF_API_KEY"),
@@ -106,10 +116,14 @@ def main():
             if tool_name in TOOL_MAPPING:
                 available_tools.append(TOOL_MAPPING[tool_name]())
             else:
-                raise ValueError(f"Tool {tool_name} is not recognized either as a default tool or a Space.")
+                raise ValueError(
+                    f"Tool {tool_name} is not recognized either as a default tool or a Space."
+                )
 
     print(f"Running agent with these tools: {args.tools}")
-    agent = CodeAgent(tools=available_tools, model=model, additional_authorized_imports=args.imports)
+    agent = CodeAgent(
+        tools=available_tools, model=model, additional_authorized_imports=args.imports
+    )
 
     agent.run(args.prompt)
 

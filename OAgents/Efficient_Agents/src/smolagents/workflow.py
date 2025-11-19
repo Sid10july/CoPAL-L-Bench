@@ -19,12 +19,13 @@ from typing import Union, List
 import os
 import json
 
-save_dir = 'workflow'
+save_dir = "workflow"
 os.makedirs(save_dir, exist_ok=True)
+
 
 class Step:
 
-    __slots__ = ('index', 'description')
+    __slots__ = ("index", "description")
 
     def __init__(self, index: int, description: str):
         self.index = index
@@ -38,7 +39,7 @@ class Step:
 
 
 class Workflow:
-    def __init__(self, steps: Union[str, List[Step]] = None, wf_name='gaia_validation'):
+    def __init__(self, steps: Union[str, List[Step]] = None, wf_name="gaia_validation"):
         self._steps = []
         self.load(steps)
         self.wf_name = wf_name
@@ -71,7 +72,7 @@ class Workflow:
         original_end = len(self._steps)
 
         if start_num <= original_end:
-            self._steps = self._steps[:start_num-1] + new_steps
+            self._steps = self._steps[: start_num - 1] + new_steps
         else:
             self._steps += new_steps
 
@@ -104,7 +105,9 @@ class Workflow:
         for line in s.splitlines():
             if step := Workflow._parse_line(line):
                 if step.index != expected:
-                    raise ValueError(f"Steps are not consecutive. Expected {expected}, got {step.index}")
+                    raise ValueError(
+                        f"Steps are not consecutive. Expected {expected}, got {step.index}"
+                    )
                 expected += 1
                 steps.append(step)
         return steps
@@ -112,30 +115,27 @@ class Workflow:
     @staticmethod
     def _parse_line(line: str) -> Union[Step, None]:
 
-        pattern = re.compile(
-            r'^\s*[([{]?(\d+)[.)\]、}]\s*(.*)$',
-            flags=re.UNICODE
-        )
+        pattern = re.compile(r"^\s*[([{]?(\d+)[.)\]、}]\s*(.*)$", flags=re.UNICODE)
         line = line.strip()
         if match := pattern.match(line):
             return Step(int(match.group(1)), match.group(2))
         return None
-    
+
     def load_from_file(self):
         wf_path = os.path.join(save_dir, f"{self.wf_name}.json")
         if os.path.exists(wf_path):
-            with open(wf_path, 'r') as f:
+            with open(wf_path, "r") as f:
                 data = json.load(f)
             if self.task_id in data:
-                self._steps = self.load_from_str(data[self.task_id]['workflow'])
+                self._steps = self.load_from_str(data[self.task_id]["workflow"])
             else:
                 raise ValueError(f"task_id {self.task_id} not found in {wf_path}")
         else:
-           raise FileNotFoundError
+            raise FileNotFoundError
 
     def save_to_file(self, data_dict):
         wf_path = os.path.join(save_dir, f"{self.wf_name}.jsonl")
-        with open(wf_path, 'a+', encoding='utf-8') as f:
+        with open(wf_path, "a+", encoding="utf-8") as f:
             f.write(json.dumps(data_dict) + "\n")
 
     def __getitem__(self, index: int):
@@ -148,8 +148,4 @@ class Workflow:
         return f"Workflow({self._steps})"
 
     def __str__(self):
-        return "\n".join(
-            f"{str(step)}"
-            for step in self._steps
-        )
-
+        return "\n".join(f"{str(step)}" for step in self._steps)

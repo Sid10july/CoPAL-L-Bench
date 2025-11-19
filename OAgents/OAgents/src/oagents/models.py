@@ -66,7 +66,6 @@ class EmptyContentError(Exception):
         super().__init__(f"Empty content in response: {response}")
 
 
-
 def get_dict_from_nested_dataclasses(obj, ignore_key=None):
     def convert(obj):
         if hasattr(obj, "__dataclass_fields__"):
@@ -120,8 +119,13 @@ class ChatMessage:
     def from_hf_api(cls, message, raw) -> "ChatMessage":
         tool_calls = None
         if getattr(message, "tool_calls", None) is not None:
-            tool_calls = [ChatMessageToolCall.from_hf_api(tool_call) for tool_call in message.tool_calls]
-        return cls(role=message.role, content=message.content, tool_calls=tool_calls, raw=raw)
+            tool_calls = [
+                ChatMessageToolCall.from_hf_api(tool_call)
+                for tool_call in message.tool_calls
+            ]
+        return cls(
+            role=message.role, content=message.content, tool_calls=tool_calls, raw=raw
+        )
 
     @classmethod
     def from_dict(cls, data: dict) -> "ChatMessage":
@@ -133,7 +137,7 @@ class ChatMessage:
                         **{k: v for k, v in tc["function"].items() if k != "parameters"}
                     ),
                     id=tc["id"],
-                    type=tc["type"]
+                    type=tc["type"],
                 )
                 for tc in data["tool_calls"]
             ]
@@ -164,7 +168,9 @@ def parse_json_if_needed(arguments: Union[str, dict]) -> Union[str, dict]:
 def parse_tool_args_if_needed(message: ChatMessage) -> ChatMessage:
     if message.tool_calls is not None:
         for tool_call in message.tool_calls:
-            tool_call.function.arguments = parse_json_if_needed(tool_call.function.arguments)
+            tool_call.function.arguments = parse_json_if_needed(
+                tool_call.function.arguments
+            )
     return message
 
 
@@ -236,7 +242,9 @@ def get_clean_message_list(
     for message in message_list:
         role = message["role"]
         if role not in MessageRole.roles():
-            raise ValueError(f"Incorrect role {role}, only {MessageRole.roles()} are supported for now.")
+            raise ValueError(
+                f"Incorrect role {role}, only {MessageRole.roles()} are supported for now."
+            )
 
         if role in role_conversions:
             message["role"] = role_conversions[role]
@@ -244,19 +252,30 @@ def get_clean_message_list(
         if isinstance(message["content"], list):
             for element in message["content"]:
                 if element["type"] == "image":
-                    assert not flatten_messages_as_text, f"Cannot use images with {flatten_messages_as_text=}"
+                    assert (
+                        not flatten_messages_as_text
+                    ), f"Cannot use images with {flatten_messages_as_text=}"
                     if convert_images_to_image_urls:
                         element.update(
                             {
                                 "type": "image_url",
-                                "image_url": {"url": make_image_url(encode_image_base64(element.pop("image")))},
+                                "image_url": {
+                                    "url": make_image_url(
+                                        encode_image_base64(element.pop("image"))
+                                    )
+                                },
                             }
                         )
                     else:
                         element["image"] = encode_image_base64(element["image"])
 
-        if len(output_message_list) > 0 and message["role"] == output_message_list[-1]["role"]:
-            assert isinstance(message["content"], list), "Error: wrong content:" + str(message["content"])
+        if (
+            len(output_message_list) > 0
+            and message["role"] == output_message_list[-1]["role"]
+        ):
+            assert isinstance(message["content"], list), "Error: wrong content:" + str(
+                message["content"]
+            )
             if flatten_messages_as_text:
                 output_message_list[-1]["content"] += message["content"][0]["text"]
             else:
@@ -319,7 +338,9 @@ class Model:
         if tools_to_call_from:
             completion_kwargs.update(
                 {
-                    "tools": [get_tool_json_schema(tool) for tool in tools_to_call_from],
+                    "tools": [
+                        get_tool_json_schema(tool) for tool in tools_to_call_from
+                    ],
                     "tool_choice": "required",
                 }
             )
@@ -405,8 +426,12 @@ class Model:
                 if k not in ["last_input_token_count", "last_output_token_count"]
             }
         )
-        model_instance.last_input_token_count = model_dictionary.pop("last_input_token_count", None)
-        model_instance.last_output_token_count = model_dictionary.pop("last_output_token_count", None)
+        model_instance.last_input_token_count = model_dictionary.pop(
+            "last_input_token_count", None
+        )
+        model_instance.last_output_token_count = model_dictionary.pop(
+            "last_output_token_count", None
+        )
         return model_instance
 
 
@@ -465,7 +490,9 @@ class HfApiModel(Model):
         self.provider = provider
         if token is None:
             token = os.getenv("HF_TOKEN")
-        self.client = InferenceClient(self.model_id, provider=provider, token=token, timeout=timeout)
+        self.client = InferenceClient(
+            self.model_id, provider=provider, token=token, timeout=timeout
+        )
         self.custom_role_conversions = custom_role_conversions
 
     def __call__(
@@ -548,12 +575,19 @@ class TransformersModel(Model):
                 "Please install 'transformers' extra to use 'TransformersModel': `pip install 'oagents[transformers]'`"
             )
         import torch
-        from transformers import AutoModelForCausalLM, AutoModelForImageTextToText, AutoProcessor, AutoTokenizer
+        from transformers import (
+            AutoModelForCausalLM,
+            AutoModelForImageTextToText,
+            AutoProcessor,
+            AutoTokenizer,
+        )
 
         default_model_id = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
         if model_id is None:
             model_id = default_model_id
-            logger.warning(f"`model_id`not provided, using this default tokenizer for token counts: '{model_id}'")
+            logger.warning(
+                f"`model_id`not provided, using this default tokenizer for token counts: '{model_id}'"
+            )
         self.model_id = model_id
 
         default_max_tokens = 5000
@@ -579,7 +613,9 @@ class TransformersModel(Model):
             self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         except ValueError as e:
             if "Unrecognized configuration class" in str(e):
-                self.model = AutoModelForImageTextToText.from_pretrained(model_id, device_map=device_map)
+                self.model = AutoModelForImageTextToText.from_pretrained(
+                    model_id, device_map=device_map
+                )
                 self.processor = AutoProcessor.from_pretrained(model_id)
                 self._is_vlm = True
             else:
@@ -590,9 +626,13 @@ class TransformersModel(Model):
             )
             self.model_id = default_model_id
             self.tokenizer = AutoTokenizer.from_pretrained(default_model_id)
-            self.model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map, torch_dtype=torch_dtype)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_id, device_map=device_map, torch_dtype=torch_dtype
+            )
 
-    def make_stopping_criteria(self, stop_sequences: List[str], tokenizer) -> "StoppingCriteriaList":
+    def make_stopping_criteria(
+        self, stop_sequences: List[str], tokenizer
+    ) -> "StoppingCriteriaList":
         from transformers import StoppingCriteria, StoppingCriteriaList
 
         class StopOnStrings(StoppingCriteria):
@@ -605,9 +645,16 @@ class TransformersModel(Model):
                 self.stream = ""
 
             def __call__(self, input_ids, scores, **kwargs):
-                generated = self.tokenizer.decode(input_ids[0][-1], skip_special_tokens=True)
+                generated = self.tokenizer.decode(
+                    input_ids[0][-1], skip_special_tokens=True
+                )
                 self.stream += generated
-                if any([self.stream.endswith(stop_string) for stop_string in self.stop_strings]):
+                if any(
+                    [
+                        self.stream.endswith(stop_string)
+                        for stop_string in self.stop_strings
+                    ]
+                ):
                     return True
                 return False
 
@@ -647,7 +694,11 @@ class TransformersModel(Model):
             images = [Image.open(image) for image in images] if images else None
             prompt_tensor = self.processor.apply_chat_template(
                 messages,
-                tools=[get_tool_json_schema(tool) for tool in tools_to_call_from] if tools_to_call_from else None,
+                tools=(
+                    [get_tool_json_schema(tool) for tool in tools_to_call_from]
+                    if tools_to_call_from
+                    else None
+                ),
                 return_tensors="pt",
                 tokenize=True,
                 return_dict=True,
@@ -657,7 +708,11 @@ class TransformersModel(Model):
         else:
             prompt_tensor = self.tokenizer.apply_chat_template(
                 messages,
-                tools=[get_tool_json_schema(tool) for tool in tools_to_call_from] if tools_to_call_from else None,
+                tools=(
+                    [get_tool_json_schema(tool) for tool in tools_to_call_from]
+                    if tools_to_call_from
+                    else None
+                ),
                 return_tensors="pt",
                 return_dict=True,
                 add_generation_prompt=True if tools_to_call_from else False,
@@ -668,7 +723,10 @@ class TransformersModel(Model):
 
         if stop_sequences:
             stopping_criteria = self.make_stopping_criteria(
-                stop_sequences, tokenizer=self.processor if hasattr(self, "processor") else self.tokenizer
+                stop_sequences,
+                tokenizer=(
+                    self.processor if hasattr(self, "processor") else self.tokenizer
+                ),
             )
         else:
             stopping_criteria = None
@@ -708,7 +766,9 @@ class TransformersModel(Model):
             try:
                 parsed_output = json.loads(output)
             except json.JSONDecodeError as e:
-                raise ValueError(f"Tool call '{output}' has an invalid JSON structure: {e}")
+                raise ValueError(
+                    f"Tool call '{output}' has an invalid JSON structure: {e}"
+                )
             tool_name = parsed_output.get("name")
             tool_arguments = parsed_output.get("arguments")
             return ChatMessage(
@@ -718,7 +778,9 @@ class TransformersModel(Model):
                     ChatMessageToolCall(
                         id="".join(random.choices("0123456789", k=5)),
                         type="function",
-                        function=ChatMessageToolCallDefinition(name=tool_name, arguments=tool_arguments),
+                        function=ChatMessageToolCallDefinition(
+                            name=tool_name, arguments=tool_arguments
+                        ),
                     )
                 ],
                 raw={"out": out, "completion_kwargs": completion_kwargs},
@@ -771,7 +833,8 @@ class LiteLLMModel(Model):
     ) -> ChatMessage:
         try:
             import litellm
-            litellm.drop_params=True
+
+            litellm.drop_params = True
         except ModuleNotFoundError:
             raise ModuleNotFoundError(
                 "Please install 'litellm' extra to use LiteLLMModel: `pip install 'oagents[litellm]'`"
@@ -796,7 +859,9 @@ class LiteLLMModel(Model):
         self.last_input_token_count = response.usage.prompt_tokens
         self.last_output_token_count = response.usage.completion_tokens
         message = ChatMessage.from_dict(
-            response.choices[0].message.model_dump(include={"role", "content", "tool_calls"})
+            response.choices[0].message.model_dump(
+                include={"role", "content", "tool_calls"}
+            )
         )
         message.raw = response
 
@@ -854,15 +919,18 @@ class OpenAIServerModel(Model):
         self.custom_role_conversions = custom_role_conversions
 
     @staticmethod
-    def truncate_content_based_on_stop_sequences(content: str, stop_sequences: List[str]) -> str:
+    def truncate_content_based_on_stop_sequences(
+        content: str, stop_sequences: List[str]
+    ) -> str:
         if not stop_sequences:
             return content
         for stop_seq in stop_sequences:
             index = content.find(stop_seq)
             if index != -1:
-                content = content[:index + len(stop_seq)]
+                content = content[: index + len(stop_seq)]
                 break  # Only keep the first match
         return content
+
     def __call__(
         self,
         messages: List[Dict[str, str]],
@@ -883,9 +951,9 @@ class OpenAIServerModel(Model):
         )
 
         # Check if model_id contains 'o3' or 'o4'
-        if 'o3' in self.model_id.lower() or 'o4' in self.model_id.lower():
+        if "o3" in self.model_id.lower() or "o4" in self.model_id.lower():
             # Remove stop_sequences from completion_kwargs
-            completion_kwargs.pop('stop', None)
+            completion_kwargs.pop("stop", None)
 
         # response = self.client.chat.completions.create(**completion_kwargs)
 
@@ -898,22 +966,33 @@ class OpenAIServerModel(Model):
                 self.last_input_token_count = response.usage.prompt_tokens
                 self.last_output_token_count = response.usage.completion_tokens
 
-                if not response.choices[0].message.content and not getattr(response.choices[0].message, 'tool_calls', None):  # o1 o3-mini
+                if not response.choices[0].message.content and not getattr(
+                    response.choices[0].message, "tool_calls", None
+                ):  # o1 o3-mini
                     raise EmptyContentError(response)
 
                 message = ChatMessage.from_dict(
-                    response.choices[0].message.model_dump(include={"role", "content", "tool_calls"})
+                    response.choices[0].message.model_dump(
+                        include={"role", "content", "tool_calls"}
+                    )
                 )
                 message.raw = response
 
                 sys_fp = response.system_fingerprint
                 logger.info(f"Response fingerprint:{sys_fp}")
-                if sys_fp and sys_fp.strip().lower() in  ['fp_ee1d74bde0', 'fp_3dfb47c1f3']:
-                    logger.warning("Warning! The response might be sent from Azure backend.")
+                if sys_fp and sys_fp.strip().lower() in [
+                    "fp_ee1d74bde0",
+                    "fp_3dfb47c1f3",
+                ]:
+                    logger.warning(
+                        "Warning! The response might be sent from Azure backend."
+                    )
 
                 # If model_id contains 'o3' or 'o4', manually truncate content based on stop_sequences
-                if 'o3' in self.model_id.lower() or 'o4' in self.model_id.lower():
-                    message.content = self.truncate_content_based_on_stop_sequences(message.content, stop_sequences)
+                if "o3" in self.model_id.lower() or "o4" in self.model_id.lower():
+                    message.content = self.truncate_content_based_on_stop_sequences(
+                        message.content, stop_sequences
+                    )
 
                 if tools_to_call_from is not None:
                     return parse_tool_args_if_needed(message)
@@ -923,17 +1002,25 @@ class OpenAIServerModel(Model):
                 raise
             except APIConnectionError as e:
                 if attempt < max_retries:
-                    logging.warning(f"Network error occurred: {e}. Retrying in {retry_delay} seconds...")
+                    logging.warning(
+                        f"Network error occurred: {e}. Retrying in {retry_delay} seconds..."
+                    )
                     time.sleep(retry_delay)
                 else:
-                    logging.error(f"Failed to complete request after {max_retries} retries.")
+                    logging.error(
+                        f"Failed to complete request after {max_retries} retries."
+                    )
                     raise
             except (APIStatusError, EmptyContentError) as e:
                 if attempt < max_retries:
-                    logging.warning(f"API status error occurred: {e}. Retrying in 5 seconds...")
+                    logging.warning(
+                        f"API status error occurred: {e}. Retrying in 5 seconds..."
+                    )
                     time.sleep(5)
                 else:
-                    logging.error(f"Failed to complete request after {max_retries} retries.")
+                    logging.error(
+                        f"Failed to complete request after {max_retries} retries."
+                    )
                     raise
             except OpenAIError as e:
                 logging.error(f"API error occurred: {e}.")
@@ -985,11 +1072,18 @@ class AzureOpenAIServerModel(OpenAIServerModel):
         if api_key is None:
             api_key = os.environ.get("AZURE_OPENAI_API_KEY")
 
-        super().__init__(model_id=model_id, api_key=api_key, custom_role_conversions=custom_role_conversions, **kwargs)
+        super().__init__(
+            model_id=model_id,
+            api_key=api_key,
+            custom_role_conversions=custom_role_conversions,
+            **kwargs,
+        )
         # if we've reached this point, it means the openai package is available (checked in baseclass) so go ahead and import it
         import openai
 
-        self.client = openai.AzureOpenAI(api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint)
+        self.client = openai.AzureOpenAI(
+            api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint
+        )
 
 
 def add_tool_prompt(messages, tools):
@@ -1009,7 +1103,9 @@ def add_tool_prompt(messages, tools):
         for tool in tools
     )
 
-    messages[0]["content"][0]['text'] += "\n\n" + tool_prompt + "\n\n" + tool_description
+    messages[0]["content"][0]["text"] += (
+        "\n\n" + tool_prompt + "\n\n" + tool_description
+    )
 
     return messages
 
@@ -1020,18 +1116,18 @@ def parse_tool_call_to_response(response):
             return ast.literal_eval(input_string)
         except (SyntaxError, ValueError):
             pass
-        
+
         try:
             return json.loads(input_string)
         except json.JSONDecodeError:
             pass
-        
+
         try:
             repaired = repair_json(input_string)
             return json.loads(repaired)
         except (json.JSONDecodeError, Exception) as e:
             raise ValueError(f"Failed to parse JSON segment: {str(e)}") from e
-        
+
     def extract_all_json(input_string):
         results = []
         stack = []
@@ -1039,20 +1135,20 @@ def parse_tool_call_to_response(response):
         i = 0
         while i < len(input_string):
             char = input_string[i]
-            if char == '{':
+            if char == "{":
                 if not stack:
                     start_index = i
                 stack.append(char)
-            elif char == '}':
+            elif char == "}":
                 if stack:
                     stack.pop()
                     if not stack:
-                        json_str = input_string[start_index:i+1]
+                        json_str = input_string[start_index : i + 1]
                         json_data = parse_json_segment(json_str)
                         results.append(json_data)
             i += 1
         return results
-        
+
     def wrap_tool_call(data):
         if isinstance(data, list):
             return [wrap_tool_call(tc) for tc in data]
@@ -1063,14 +1159,14 @@ def parse_tool_call_to_response(response):
                     "type": "function",
                     "function": {
                         "name": data["name"],
-                        "arguments": json.dumps(data["arguments"])
-                    }
+                        "arguments": json.dumps(data["arguments"]),
+                    },
                 }
             elif "function" in data.keys():
                 return {
                     "id": f"call_{hash(json.dumps(data))}",
                     "type": "function",
-                    **data
+                    **data,
                 }
             elif "tool_call" in data.keys():
                 return [wrap_tool_call(tc) for tc in data["tool_call"]]
@@ -1084,7 +1180,7 @@ def parse_tool_call_to_response(response):
     tool_calls = []
     if json_list:
         for json_data in json_list:
-            if json_data.get('id') is not None:
+            if json_data.get("id") is not None:
                 tool_calls.append(json_data)
             else:
                 try:
@@ -1096,7 +1192,9 @@ def parse_tool_call_to_response(response):
                     else:
                         tool_calls.append(tools_to_use)
                 except (TypeError, KeyError) as e:
-                    logger.error(f"Error in tool call wrapping: {e}, ignore and continue.")
+                    logger.error(
+                        f"Error in tool call wrapping: {e}, ignore and continue."
+                    )
                     continue
     else:
         logger.warning("Failed to parse tool_calls in response. Nothing changed.")
@@ -1104,15 +1202,17 @@ def parse_tool_call_to_response(response):
     response.choices[0].message.tool_calls = tool_calls
     return response
 
+
 def dict_content_to_str(messages):
     def content_to_str(content):
         if content is None:
-            return ''
+            return ""
         if isinstance(content, dict):
-            return content.get('text', '')
+            return content.get("text", "")
         if isinstance(content, list):
-            return ''.join(content_to_str(c) for c in content)
+            return "".join(content_to_str(c) for c in content)
         return str(content)
+
     for message in messages:
         if "content" in message:
             message["content"] = content_to_str(message["content"])
@@ -1239,30 +1339,38 @@ class FakeToolCallOpenAIServerModel(Model):
         )
 
         if "ep" or "r1" in self.model_id.lower():
-            completion_kwargs["messages"] = dict_content_to_str(completion_kwargs["messages"])
+            completion_kwargs["messages"] = dict_content_to_str(
+                completion_kwargs["messages"]
+            )
 
         max_retries = 5
         retry_delay = 5  # seconds
         empty_message = ChatMessage.from_dict(
-            {"role": "assistant",
-             "content": "",
-             "tool_calls": ""}
+            {"role": "assistant", "content": "", "tool_calls": ""}
         )
         for attempt in range(max_retries):
             try:
                 response = self.client.chat.completions.create(**completion_kwargs)
 
-                self.last_input_token_count = response.usage.prompt_tokens if response.usage else 0
-                self.last_output_token_count = response.usage.completion_tokens if response.usage else 0
+                self.last_input_token_count = (
+                    response.usage.prompt_tokens if response.usage else 0
+                )
+                self.last_output_token_count = (
+                    response.usage.completion_tokens if response.usage else 0
+                )
 
-                if not response.choices[0].message.content and not getattr(response.choices[0].message, 'tool_calls', None):  # o1 o3-mini
+                if not response.choices[0].message.content and not getattr(
+                    response.choices[0].message, "tool_calls", None
+                ):  # o1 o3-mini
                     raise EmptyContentError(response)
 
                 if tools_to_call_from is not None:
                     response = parse_tool_call_to_response(response)
 
                 message = ChatMessage.from_dict(
-                    response.choices[0].message.model_dump(include={"role", "content", "tool_calls"})
+                    response.choices[0].message.model_dump(
+                        include={"role", "content", "tool_calls"}
+                    )
                 )
                 message.raw = response
 
@@ -1273,17 +1381,25 @@ class FakeToolCallOpenAIServerModel(Model):
                 break
             except APIConnectionError as e:
                 if attempt < max_retries:
-                    logging.warning(f"Network error occurred: {e}. Retrying in {retry_delay} seconds...")
+                    logging.warning(
+                        f"Network error occurred: {e}. Retrying in {retry_delay} seconds..."
+                    )
                     time.sleep(retry_delay)
                 else:
-                    logging.error(f"Failed to complete request after {max_retries} retries.")
+                    logging.error(
+                        f"Failed to complete request after {max_retries} retries."
+                    )
                     break
             except (APIStatusError, EmptyContentError) as e:
                 if attempt < max_retries:
-                    logging.warning(f"API status error occurred: {e}. Retrying in 60 seconds...")
+                    logging.warning(
+                        f"API status error occurred: {e}. Retrying in 60 seconds..."
+                    )
                     time.sleep(60)
                 else:
-                    logging.error(f"Failed to complete request after {max_retries} retries.")
+                    logging.error(
+                        f"Failed to complete request after {max_retries} retries."
+                    )
                     empty_message.raw = e.response
                     break
             except OpenAIError as e:
