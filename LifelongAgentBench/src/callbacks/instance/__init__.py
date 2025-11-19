@@ -4,3 +4,6 @@ from .group_self_consistency_callback import GroupSelfConsistencyCallback
 from .consecutive_abnormal_agent_inference_process_handling_callback import (
     ConsecutiveAbnormalAgentInferenceProcessHandlingCallback,
 )
+
+# ADD THIS ↓↓↓
+from .cost_print_callback import CostPrintCallback

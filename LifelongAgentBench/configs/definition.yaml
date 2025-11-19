@@ -18,7 +18,7 @@ callback_dict:
     - ./components/callbacks/current_session_saving_callback.yaml
     - ./components/callbacks/group_self_consistency_callback.yaml
     - ./components/callbacks/consecutive_abnormal_agent_inference_process_handling_callback.yaml
-    - ./components/callbacks/cost_print_callback.yaml     # <- ADDED THIS
+    - ./components/callbacks/cost_print_callback.yaml
 
 import:
   - ./components/logger.yaml
