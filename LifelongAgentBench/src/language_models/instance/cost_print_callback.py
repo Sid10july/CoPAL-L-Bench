@@ -8,19 +8,23 @@ class CostPrintCallback(Callback):
         return True
 
     def on_task_complete(self, callback_args: CallbackArguments) -> None:
-        session = callback_args.current_session
+        agent = callback_args.agent
 
-        # Access the cost tracker attached to session
-        cost_tracker = getattr(session, "cost", None)
+        # LLM object (CountingLLM wrapper) is usually on agent.llm or agent.model
+        llm = getattr(agent, "llm", None) or getattr(agent, "model", None)
+        if llm is None:
+            print("[CostPrintCallback] No LLM found on agent.")
+            return
 
+        cost_tracker = getattr(llm, "cost_tracker", None)
         if cost_tracker is None:
-            print("[CostPrintCallback] No cost tracker found.")
+            print("[CostPrintCallback] No cost tracker found on LLM.")
             return
 
         summary = cost_tracker.summary()
 
-        print("\n=== Cost Metrics ===")
-        print(f"Total Input Tokens:   {summary['input_tokens']}")
-        print(f"Total Output Tokens:  {summary['output_tokens']}")
-        print(f"Total Cost ($):       {summary['total_cost']}")
-        print("====================\n")
+        print("\n=== Cost Metrics (CostPrintCallback) ===")
+        print(f"Total Input Tokens:   {summary.get('total_input_tokens')}")
+        print(f"Total Output Tokens:  {summary.get('total_output_tokens')}")
+        print(f"Total Cost ($):       {summary.get('total_cost')}")
+        print("========================================\n")

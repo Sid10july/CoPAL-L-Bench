@@ -9,8 +9,8 @@ assignment_config:
       name: current_session_saving_callback
     callback_1:
       name: consecutive_abnormal_agent_inference_process_handling_callback
-    callback_2:
-      name: cost_print_callback        
+    # callback_2:
+    #   name: cost_print_callback        
   output_dir: outputs/{TIMESTAMP}
   sample_order: default
 

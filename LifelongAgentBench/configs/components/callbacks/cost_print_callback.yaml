@@ -1,0 +1,3 @@
+cost_print_callback:
+  module: src.callbacks.instance.cost_print_callback
+  parameters: {}
