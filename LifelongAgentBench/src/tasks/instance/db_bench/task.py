@@ -275,10 +275,28 @@ class DBBench(Task[DBBenchDatasetItem]):
     def __init__(
         self,
         task_name: TaskName,
-        chat_history_item_factory: ChatHistoryItemFactory,
+        chat_history_item_factory: ChatHistoryItemFactory | dict,
         data_file_path: str,
         max_round: int,
     ):
+        # --- NEW: normalize chat_history_item_factory ---
+        from src.typings import GeneralInstanceFactory
+        from src.factories.chat_history_item import ChatHistoryItemFactory
+
+        # If it came in as a raw config dict, turn it into an actual factory
+        if isinstance(chat_history_item_factory, dict):
+            if "module" in chat_history_item_factory:
+                # Use the same factory mechanism as everywhere else
+                gh_factory = GeneralInstanceFactory.model_validate(
+                    chat_history_item_factory
+                )
+                chat_history_item_factory = gh_factory.create()
+            else:
+                # Fallback: dict of parameters directly
+                chat_history_item_factory = ChatHistoryItemFactory(
+                    **chat_history_item_factory
+                )
+        # --- END NEW ---
         super().__init__(task_name, chat_history_item_factory, max_round)
         data = json.load(open(data_file_path))
         dataset: dict[SampleIndex, DBBenchDatasetItem] = {}

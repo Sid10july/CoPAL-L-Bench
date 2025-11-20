@@ -1,7 +1,7 @@
 import:
-- ../task.yaml
-- ../../../agent.yaml
-- ../../../../../../definition.yaml
+  - ../task.yaml
+  - ../../../agent.yaml
+  - ../../../../../../definition.yaml
 
 assignment_config:
   callback_dict:
@@ -10,7 +10,7 @@ assignment_config:
     callback_1:
       name: consecutive_abnormal_agent_inference_process_handling_callback
     callback_2:
-      name: cost_print_callback        
+      name: cost_print_callback        # <-- must match the key in (2)
   output_dir: outputs/{TIMESTAMP}
   sample_order: default
 

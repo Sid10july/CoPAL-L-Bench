@@ -191,6 +191,15 @@ class ConfigUtility:
         assignment_callback_dict: dict[str, Any] = raw_config["assignment_config"][
             "callback_dict"
         ]
+
+        # DEBUG PRINTS — add these 4 lines:
+        print(
+            "Assignment callback names:",
+            [cb["name"] for cb in assignment_callback_dict.values()],
+        )
+        print("Registry callback_dict keys:", list(raw_config["callback_dict"].keys()))
+        # END DEBUG
+
         for callback_key, callback_info_dict in assignment_callback_dict.items():
             default_callback_info_dict = raw_config["callback_dict"][
                 callback_info_dict["name"]

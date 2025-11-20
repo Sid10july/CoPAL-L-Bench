@@ -50,6 +50,8 @@ class CallbackConstructor:
                     unique_flag = (
                         ConsecutiveAbnormalAgentInferenceProcessHandlingCallback.is_unique()
                     )
+                case CostPrintCallback.__name__:
+                    unique_flag = CostPrintCallback.is_unique()
                 case _:
                     raise NotImplementedError(
                         f"Callback {target_class_str} is not implemented or not handled in CallbackConstructor."
