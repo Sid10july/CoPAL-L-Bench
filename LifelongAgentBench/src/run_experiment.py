@@ -371,6 +371,8 @@ def main() -> None:
     else:
         # Worst case: the agent keeps a callable function attribute — try common names:
         setattr(agent, "llm", wrapped)
+    # >>> ADD THIS so callbacks can find the tracker <<<
+    setattr(agent, "cost_tracker", cost_tracker)
     #####
     config_utility.postprocess(task, agent)
     config_utility.validate(task, agent)
