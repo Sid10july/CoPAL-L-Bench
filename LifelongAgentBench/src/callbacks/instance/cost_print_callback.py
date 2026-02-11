@@ -1,4 +1,5 @@
 from src.callbacks.callback import Callback, CallbackArguments
+from src.typings import SessionEvaluationOutcome
 
 
 class CostPrintCallback(Callback):
@@ -6,13 +7,14 @@ class CostPrintCallback(Callback):
         super().__init__()
         self._printed_calls = 0
         self._step = 0
+        self._session_start_call_index: dict[int, int] = {}
 
     @classmethod
     def is_unique(cls) -> bool:
         return True
 
     def _get_cost_tracker(self, callback_args: CallbackArguments):
-        agent = callback_args.agent
+        agent = callback_args.session_context.agent
 
         # First try agent.cost_tracker
         cost_tracker = getattr(agent, "cost_tracker", None)
@@ -49,11 +51,53 @@ class CostPrintCallback(Callback):
             return
         self._print_new_calls(cost_tracker)
 
+    def on_session_create(self, callback_args: CallbackArguments) -> None:
+        cost_tracker = self._get_cost_tracker(callback_args)
+        if cost_tracker is None:
+            return
+        calls = getattr(cost_tracker, "calls", None) or []
+        self._session_start_call_index[callback_args.current_session.sample_index] = (
+            len(calls)
+        )
+
     def on_task_complete(self, callback_args: CallbackArguments) -> None:
         cost_tracker = self._get_cost_tracker(callback_args)
         if cost_tracker is None:
             print("[CostPrintCallback] No cost tracker found on agent/LLM.")
             return
+
+        # Per-sample cost (paper definition)
+        calls = getattr(cost_tracker, "calls", None) or []
+        start_idx = self._session_start_call_index.get(
+            callback_args.current_session.sample_index, None
+        )
+        if start_idx is not None and start_idx <= len(calls):
+            sample_calls = calls[start_idx:]
+            sample_in = sum(c.prompt_tokens for c in sample_calls)
+            sample_out = sum(c.completion_tokens for c in sample_calls)
+            sample_cost = sum(c.total_cost_usd for c in sample_calls)
+            outcome = callback_args.current_session.evaluation_record.outcome
+            pass_rate = 1.0 if outcome == SessionEvaluationOutcome.CORRECT else 0.0
+            cost_of_pass = sample_cost / pass_rate if pass_rate > 0 else float("inf")
+
+            detail = callback_args.current_session.evaluation_record.detail_dict or {}
+            detail.update(
+                {
+                    "cost_input_tokens": sample_in,
+                    "cost_output_tokens": sample_out,
+                    "cost_usd": sample_cost,
+                    "cost_of_pass": cost_of_pass,
+                    "pass_rate": pass_rate,
+                }
+            )
+            callback_args.current_session.evaluation_record.detail_dict = detail
+
+            print("\n[CostPrintCallback] === Sample Cost ===")
+            print(f"Sample Input Tokens:  {sample_in}")
+            print(f"Sample Output Tokens: {sample_out}")
+            print(f"Sample Cost ($):      {sample_cost:.6f}")
+            print(f"Sample Cost-of-Pass:  {cost_of_pass}")
+            print("[CostPrintCallback] ===================\n")
 
         summary = cost_tracker.summary()
         print("\n[CostPrintCallback] === Cost Metrics ===")

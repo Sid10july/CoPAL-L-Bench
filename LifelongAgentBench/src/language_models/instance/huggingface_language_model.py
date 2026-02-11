@@ -22,6 +22,7 @@ class HuggingfaceLanguageModel(LanguageModel):
         device_map: str | Mapping[str, Any] = "auto",
     ):
         super().__init__(role_dict)
+        self.model_name_or_path = model_name_or_path
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         self.io_log_path = os.environ.get("LLM_IO_LOG")
 
@@ -184,6 +185,23 @@ class HuggingfaceLanguageModel(LanguageModel):
         finally:
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
+
+        # --- Cost tracking (token counts) ---
+        cost_tracker = getattr(self, "cost_tracker", None)
+        if cost_tracker is not None:
+            try:
+                model_name = getattr(self, "model_name_or_path", None) or getattr(
+                    self.model, "name_or_path", "unknown-model"
+                )
+                prompt_token_counts = batch_attention_mask.sum(-1).tolist()
+                total_len = int(output_tensor.shape[1])
+                for prompt_tokens in prompt_token_counts:
+                    completion_tokens = max(0, total_len - int(prompt_tokens))
+                    cost_tracker.log_call(
+                        str(model_name), int(prompt_tokens), int(completion_tokens)
+                    )
+            except Exception:
+                pass
 
         output_str_list: Sequence[str] = self.tokenizer.batch_decode(
             output_tensor[:, batch_input_ids.shape[1] :], skip_special_tokens=True

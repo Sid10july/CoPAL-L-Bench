@@ -373,6 +373,10 @@ def main() -> None:
         setattr(agent, "llm", wrapped)
     # >>> ADD THIS so callbacks can find the tracker <<<
     setattr(agent, "cost_tracker", cost_tracker)
+    # Also attach to language_model (used by LanguageModelAgent)
+    lm_obj = getattr(agent, "_language_model", None)
+    if lm_obj is not None:
+        setattr(lm_obj, "cost_tracker", cost_tracker)
     #####
     config_utility.postprocess(task, agent)
     config_utility.validate(task, agent)
