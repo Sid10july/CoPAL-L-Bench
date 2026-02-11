@@ -35,6 +35,10 @@ class CostRegistry:
         # "meta-llama/Llama-3.1-8B-Instruct": {"in": 0.0, "out": 0.0},  # local Transformers -> $0
         # If you route via an API, put the true prices:
         # "meta-llama/Llama-3.1-8B-Instruct@providerX": {"in": 0.2, "out": 0.6},
+        # Qwen 2.5 7B Instruct (prices in USD per 1K tokens)
+        # Source provided: $0.040 / 1M input, $0.100 / 1M output
+        "Qwen/Qwen2.5-7B-Instruct": {"in": 0.00004, "out": 0.00010},
+        "qwen-2.5-7b-instruct": {"in": 0.00004, "out": 0.00010},
     }
 
     def __init__(self, overrides: Optional[Dict[str, Dict[str, float]]] = None):

@@ -8,6 +8,9 @@ class CostPrintCallback(Callback):
         self._printed_calls = 0
         self._step = 0
         self._session_start_call_index: dict[int, int] = {}
+        self._sample_costs: list[float] = []
+        self._sample_correct: int = 0
+        self._sample_total: int = 0
 
     @classmethod
     def is_unique(cls) -> bool:
@@ -78,7 +81,11 @@ class CostPrintCallback(Callback):
             sample_cost = sum(c.total_cost_usd for c in sample_calls)
             outcome = callback_args.current_session.evaluation_record.outcome
             pass_rate = 1.0 if outcome == SessionEvaluationOutcome.CORRECT else 0.0
-            cost_of_pass = sample_cost / pass_rate if pass_rate > 0 else float("inf")
+
+            self._sample_total += 1
+            if pass_rate > 0:
+                self._sample_correct += 1
+            self._sample_costs.append(sample_cost)
 
             detail = callback_args.current_session.evaluation_record.detail_dict or {}
             detail.update(
@@ -86,17 +93,37 @@ class CostPrintCallback(Callback):
                     "cost_input_tokens": sample_in,
                     "cost_output_tokens": sample_out,
                     "cost_usd": sample_cost,
-                    "cost_of_pass": cost_of_pass,
                     "pass_rate": pass_rate,
+                    "correct": bool(pass_rate),
                 }
             )
+
+            running_mean = (
+                sum(self._sample_costs) / len(self._sample_costs)
+                if self._sample_costs
+                else 0.0
+            )
+            running_pass_rate = (
+                self._sample_correct / self._sample_total if self._sample_total else 0.0
+            )
+            running_cost_of_pass = (
+                running_mean / running_pass_rate if running_pass_rate > 0 else None
+            )
+            detail["run_metrics"] = {
+                "running_mean_cost_usd": running_mean,
+                "running_pass_rate": running_pass_rate,
+                "running_cost_of_pass": running_cost_of_pass,
+            }
             callback_args.current_session.evaluation_record.detail_dict = detail
 
             print("\n[CostPrintCallback] === Sample Cost ===")
             print(f"Sample Input Tokens:  {sample_in}")
             print(f"Sample Output Tokens: {sample_out}")
             print(f"Sample Cost ($):      {sample_cost:.6f}")
-            print(f"Sample Cost-of-Pass:  {cost_of_pass}")
+            print(f"Sample Attempt Cost:  {sample_cost:.6f}")
+            print(f"Sample Correct:       {bool(pass_rate)}")
+            print(f"Running Mean Cost:    {running_mean:.6f}")
+            print(f"Running Cost-of-Pass: {running_cost_of_pass}")
             print("[CostPrintCallback] ===================\n")
 
         summary = cost_tracker.summary()
