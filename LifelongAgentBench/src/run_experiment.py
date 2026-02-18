@@ -307,6 +307,21 @@ def main() -> None:
     # region Prepare variables
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_path", type=str)
+    parser.add_argument(
+        "--enable_dbbench_bandit",
+        action="store_true",
+        default=os.environ.get("DBBENCH_BANDIT_ENABLE", "0") == "1",
+    )
+    parser.add_argument(
+        "--bandit_lambda",
+        type=float,
+        default=float(os.environ.get("DBBENCH_BANDIT_LAMBDA", "100.0")),
+    )
+    parser.add_argument(
+        "--bandit_alpha",
+        type=float,
+        default=float(os.environ.get("DBBENCH_BANDIT_ALPHA", "0.5")),
+    )
     args = parser.parse_args()
     raw_config = ConfigLoader().load_from(args.config_path)
     assignment_config, environment_config, logger_config, path_config = (
@@ -408,6 +423,35 @@ def main() -> None:
     callback_handler = CallbackHandler(callback_dict)
     # endregion
     # region Run experiment
+    bandit_enabled = (
+        bool(args.enable_dbbench_bandit) and str(task.task_name) == "db_bench"
+    )
+    dbbench_bandit = None
+    dbbench_feature_adapter = None
+    bandit_state_by_sample: dict[int, dict[str, Any]] = {}
+    bandit_action_counts = [0, 0, 0]
+    bandit_log_path = os.path.join(
+        assignment_config.output_dir, "metrics", "dbbench_bandit.jsonl"
+    )
+    if bandit_enabled:
+        from src.controllers.dbbench_linucb import (
+            LinUCB,
+            DBBenchFeatureAdapter,
+            DBBENCH_COMPUTE_PROFILES,
+        )
+
+        dbbench_feature_adapter = DBBenchFeatureAdapter()
+        dbbench_bandit = LinUCB(
+            n_actions=len(DBBENCH_COMPUTE_PROFILES),
+            feature_dim=dbbench_feature_adapter.feature_dim,
+            alpha=float(args.bandit_alpha),
+        )
+        os.makedirs(os.path.dirname(bandit_log_path), exist_ok=True)
+        logger.info(
+            f"[DBBenchBandit] enabled. alpha={args.bandit_alpha}, lambda={args.bandit_lambda}, "
+            f"profiles={[p.name for p in DBBENCH_COMPUTE_PROFILES]}"
+        )
+
     logger.info(
         f"Experiment start. "
         f"Total sample count: {len(assignment_config.sample_order)}. "
@@ -423,6 +467,41 @@ def main() -> None:
         if callback_args.session_controller.should_task_reset:
             task.reset(session)
             callback_handler.on_task_reset(callback_args)
+        if (
+            bandit_enabled
+            and dbbench_bandit is not None
+            and dbbench_feature_adapter is not None
+        ):
+            from src.controllers.dbbench_linucb import DBBENCH_COMPUTE_PROFILES
+
+            dataset_item = task._get_current_dataset_item()  # noqa: SLF001
+            features = dbbench_feature_adapter.build(dataset_item)
+            action_idx, ucb_score = dbbench_bandit.select_action(features)
+            profile = DBBENCH_COMPUTE_PROFILES[action_idx]
+            bandit_action_counts[action_idx] += 1
+
+            # Apply per-sample compute budget.
+            if hasattr(agent, "_inference_config_dict"):
+                if getattr(agent, "_inference_config_dict") is None:
+                    setattr(agent, "_inference_config_dict", {})
+                agent._inference_config_dict["max_new_tokens"] = profile.max_new_tokens  # type: ignore[attr-defined]
+            task.max_round = profile.max_round
+
+            # Save info to update bandit after completion.
+            calls = getattr(cost_tracker, "calls", None) or []
+            bandit_state_by_sample[int(sample_index)] = {
+                "features": features,
+                "action_idx": action_idx,
+                "profile_name": profile.name,
+                "max_new_tokens": profile.max_new_tokens,
+                "max_round": profile.max_round,
+                "start_call_idx": len(calls),
+                "ucb_score": ucb_score,
+            }
+            logger.info(
+                f"[DBBenchBandit] sample={sample_index}, action={profile.name}, "
+                f"max_new_tokens={profile.max_new_tokens}, max_round={profile.max_round}"
+            )
         logger.info(f"Sample {sample_index} start.")
         # endregion
         # region Run session
@@ -448,6 +527,43 @@ def main() -> None:
             f"Sample {sample_index} end. Session status: {session.sample_status}. "
             f"Evaluation outcome: {session.evaluation_record.outcome}."
         )
+        if bandit_enabled and dbbench_bandit is not None:
+            bandit_state = bandit_state_by_sample.get(int(sample_index))
+            if bandit_state is not None:
+                calls = getattr(cost_tracker, "calls", None) or []
+                sample_calls = calls[bandit_state["start_call_idx"] :]
+                sample_cost = float(sum(c.total_cost_usd for c in sample_calls))
+                correct = session.evaluation_record.outcome.value == "correct"
+                reward = (1.0 if correct else 0.0) - (
+                    float(args.bandit_lambda) * sample_cost
+                )
+                dbbench_bandit.update(
+                    action_idx=int(bandit_state["action_idx"]),
+                    x=bandit_state["features"],
+                    reward=reward,
+                )
+                os.makedirs(os.path.dirname(bandit_log_path), exist_ok=True)
+                with open(bandit_log_path, "a") as f:
+                    f.write(
+                        json.dumps(
+                            {
+                                "sample_index": int(sample_index),
+                                "correct": correct,
+                                "sample_cost_usd": sample_cost,
+                                "reward": reward,
+                                "action_idx": int(bandit_state["action_idx"]),
+                                "profile_name": bandit_state["profile_name"],
+                                "max_new_tokens": int(bandit_state["max_new_tokens"]),
+                                "max_round": int(bandit_state["max_round"]),
+                                "ucb_score": float(bandit_state["ucb_score"]),
+                            }
+                        )
+                        + "\n"
+                    )
+                logger.info(
+                    f"[DBBenchBandit] sample={sample_index}, correct={correct}, "
+                    f"cost={sample_cost:.6f}, reward={reward:.6f}"
+                )
         # endregion
         # region Save callback state
         # The state of callback will be used to restore the previous incomplete assignment.
@@ -469,6 +585,43 @@ def main() -> None:
     logger.info(
         f"Experiment end. Metric: {metric}. Total sample count: {len(assignment_config.sample_order)}.",
     )
+    if bandit_enabled:
+        try:
+            bandit_log_entries = []
+            if os.path.exists(bandit_log_path):
+                with open(bandit_log_path, "r") as f:
+                    bandit_log_entries = [
+                        json.loads(line) for line in f if line.strip()
+                    ]
+            total = len(bandit_log_entries)
+            mean_cost = (
+                sum(row["sample_cost_usd"] for row in bandit_log_entries) / total
+                if total > 0
+                else 0.0
+            )
+            accuracy = (
+                sum(1 for row in bandit_log_entries if row["correct"]) / total
+                if total > 0
+                else 0.0
+            )
+            pass_rate = accuracy
+            cost_of_pass = (mean_cost / pass_rate) if pass_rate > 0 else None
+            metric["dbbench_bandit"] = {
+                "enabled": True,
+                "alpha": float(args.bandit_alpha),
+                "lambda": float(args.bandit_lambda),
+                "samples": total,
+                "action_counts": {
+                    "low": int(bandit_action_counts[0]),
+                    "mid": int(bandit_action_counts[1]),
+                    "high": int(bandit_action_counts[2]),
+                },
+                "mean_cost_usd": mean_cost,
+                "accuracy": accuracy,
+                "cost_of_pass": cost_of_pass,
+            }
+        except Exception as e:
+            logger.error(f"[DBBenchBandit] failed to append summary metric: {e}")
     json.dump(
         metric,
         open(path_config.metric_output_path, "w"),  # noqa

@@ -1,0 +1,81 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sid-dbbench-a100-job
+  namespace: seelab
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      # Verify this label key/value in your cluster before apply.
+      nodeSelector:
+        nvidia.com/gpu.product: NVIDIA-A100-SXM4-80GB
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "password"
+          ports:
+            - containerPort: 3306
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+
+        - name: bench
+          image: pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
+          resources:
+            requests:
+              cpu: "10"
+              memory: "40Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "12"
+              memory: "48Gi"
+              nvidia.com/gpu: "1"
+          env:
+            - name: DBBENCH_MYSQL_HOST
+              value: "127.0.0.1"
+            - name: DBBENCH_MYSQL_PORT
+              value: "3306"
+            - name: DBBENCH_MYSQL_PASSWORD
+              value: "password"
+            - name: PYTORCH_CUDA_ALLOC_CONF
+              value: "expandable_segments:True"
+            # Toggle bandit without changing code:
+            # "0" = off, "1" = on
+            - name: DBBENCH_BANDIT_ENABLE
+              value: "0"
+            - name: DBBENCH_BANDIT_ALPHA
+              value: "0.5"
+            - name: DBBENCH_BANDIT_LAMBDA
+              value: "100.0"
+          volumeMounts:
+            - name: bench-storage
+              mountPath: /work
+          workingDir: /work/LifelongAgentBench
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -euo pipefail
+              source /opt/conda/etc/profile.d/conda.sh
+              conda activate /work/conda-py311
+              BANDIT_FLAG=""
+              if [ "${DBBENCH_BANDIT_ENABLE}" = "1" ]; then
+                BANDIT_FLAG="--enable_dbbench_bandit"
+              fi
+              python3 -m src.run_experiment \
+                --config_path configs/assignments/experiments/qwen25_7b_instruct/instance/db_bench/instance/fast.yaml \
+                ${BANDIT_FLAG} \
+                --bandit_alpha "${DBBENCH_BANDIT_ALPHA}" \
+                --bandit_lambda "${DBBENCH_BANDIT_LAMBDA}"
+      volumes:
+        - name: bench-storage
+          persistentVolumeClaim:
+            claimName: sid-bench-rwo
