@@ -3,6 +3,7 @@ import mysql.connector
 import random
 import socket
 import time
+import os
 from docker.models import containers
 from typing import Optional
 
@@ -14,6 +15,21 @@ class DBBenchContainer:
     def __init__(self, image: str = "mysql"):
         self.deleted = False
         self.image = image
+        self.client = None
+        self.container = None
+        self.conn = None
+
+        # External MySQL mode: use sidecar MySQL in the same pod.
+        host = os.getenv("DBBENCH_MYSQL_HOST")
+        port_env = os.getenv("DBBENCH_MYSQL_PORT")
+        self.password = os.getenv("DBBENCH_MYSQL_PASSWORD", self.password)
+        if host and port_env:
+            self.host = host
+            self.port = int(port_env)
+            self._connect()
+            return
+
+        # Docker mode: original behavior for environments with Docker daemon.
         self.client = docker.from_env()
         p = DBBenchContainer.port + random.randint(0, 10000)
         while self.is_port_open(p):
@@ -31,29 +47,35 @@ class DBBenchContainer:
         )
 
         time.sleep(1)
+        self.host = "127.0.0.1"
+        self._connect()
 
+    def _connect(self) -> None:
         retry = 0
         while True:
             try:
                 self.conn = mysql.connector.connect(
-                    host="127.0.0.1",
+                    host=self.host,
                     user="root",
                     password=self.password,
                     port=self.port,
                     pool_reset_session=True,
                 )
-            except mysql.connector.errors.OperationalError:
-                time.sleep(1)
-            except mysql.connector.InterfaceError:
-                if retry > 10:
+            except (
+                mysql.connector.errors.OperationalError,
+                mysql.connector.errors.InterfaceError,
+                mysql.connector.errors.DatabaseError,
+            ):
+                if retry > 60:
                     raise
-                time.sleep(5)
+                time.sleep(2)
             else:
                 break
             retry += 1
 
     def delete(self) -> None:
-        self.container.stop()
+        if self.container is not None:
+            self.container.stop()
         self.deleted = True
 
     def __del__(self) -> None:
@@ -89,8 +111,9 @@ class DBBenchContainer:
         self, port: int
     ) -> bool:  # noqa (The quality checker of the IDE is wrong)
         try:
-            self.client.containers.get(f"mysql_{port}")
-            return True
+            if self.client is not None:
+                self.client.containers.get(f"mysql_{port}")
+                return True
         except Exception:  # noqa
             pass
 

@@ -3,6 +3,7 @@ import json
 import os
 import yaml
 import copy
+import random
 from enum import StrEnum
 from typing import Any, Mapping, Sequence, Optional
 import coredumpy  # type: ignore[import-untyped]
@@ -82,8 +83,28 @@ class ConfigUtility:
 
     def validate(self, task: Task[DatasetItem], agent: Agent) -> None:
         sample_index_list = task.get_sample_index_list()
+        if self.assignment_config.sample_order == "default":
+            return
+        # Normalize configured indices to the exact key type used by the task dataset.
+        sample_index_set = set(sample_index_list)
+        normalized_sample_order = []
         for selected_sample_index in self.assignment_config.sample_order:
-            assert selected_sample_index in sample_index_list
+            if selected_sample_index in sample_index_set:
+                normalized_sample_order.append(selected_sample_index)
+                continue
+            selected_as_str = str(selected_sample_index)
+            if selected_as_str in sample_index_set:
+                normalized_sample_order.append(selected_as_str)
+                continue
+            try:
+                selected_as_int = int(selected_sample_index)
+            except (TypeError, ValueError):
+                selected_as_int = None
+            if selected_as_int is not None and selected_as_int in sample_index_set:
+                normalized_sample_order.append(selected_as_int)
+                continue
+            assert selected_sample_index in sample_index_set
+        self.assignment_config.sample_order = normalized_sample_order
 
     def postprocess(self, task: Task[DatasetItem], agent: Agent) -> None:
         if self.assignment_config.sample_order == "default":
@@ -308,6 +329,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_path", type=str)
     parser.add_argument(
+        "--seed",
+        type=int,
+        default=int(os.environ.get("LAB_RUN_SEED", "42")),
+    )
+    parser.add_argument(
         "--enable_dbbench_bandit",
         action="store_true",
         default=os.environ.get("DBBENCH_BANDIT_ENABLE", "0") == "1",
@@ -323,6 +349,21 @@ def main() -> None:
         default=float(os.environ.get("DBBENCH_BANDIT_ALPHA", "0.5")),
     )
     args = parser.parse_args()
+    random.seed(args.seed)
+    try:
+        import numpy as np
+
+        np.random.seed(args.seed)
+    except Exception:
+        pass
+    try:
+        import torch
+
+        torch.manual_seed(args.seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(args.seed)
+    except Exception:
+        pass
     raw_config = ConfigLoader().load_from(args.config_path)
     assignment_config, environment_config, logger_config, path_config = (
         ConfigUtility.read_raw_config(raw_config, ConfigUtilityCaller.CLIENT)

@@ -1,0 +1,91 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sid-dbbench-rtx6000-baseline
+  namespace: seelab
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        nvidia.com/gpu.product: Quadro-RTX-6000
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "password"
+          ports:
+            - containerPort: 3306
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+
+        - name: bench
+          image: pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
+          resources:
+            requests:
+              cpu: "8"
+              memory: "24Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "9"
+              memory: "26Gi"
+              nvidia.com/gpu: "1"
+          env:
+            - name: DBBENCH_MYSQL_HOST
+              value: "127.0.0.1"
+            - name: DBBENCH_MYSQL_PORT
+              value: "3306"
+            - name: DBBENCH_MYSQL_PASSWORD
+              value: "password"
+            - name: PYTORCH_CUDA_ALLOC_CONF
+              value: "expandable_segments:True"
+          volumeMounts:
+            - name: bench-storage
+              mountPath: /work
+            - name: dshm
+              mountPath: /dev/shm
+          workingDir: /work/LifelongAgentBench
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -euo pipefail
+              source /opt/conda/etc/profile.d/conda.sh
+              conda activate /work/conda-py311
+              python3 - <<'PY'
+              import os, socket, time, sys
+              host = os.getenv("DBBENCH_MYSQL_HOST", "127.0.0.1")
+              port = int(os.getenv("DBBENCH_MYSQL_PORT", "3306"))
+              for _ in range(180):
+                  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                  s.settimeout(1.0)
+                  try:
+                      s.connect((host, port))
+                      s.close()
+                      sys.exit(0)
+                  except Exception:
+                      time.sleep(1)
+                  finally:
+                      try:
+                          s.close()
+                      except Exception:
+                          pass
+              raise SystemExit("MySQL did not become reachable in time")
+              PY
+              python3 -m src.run_experiment \
+                --config_path configs/assignments/experiments/qwen25_7b_instruct/instance/db_bench/instance/standard.yaml
+      volumes:
+        - name: bench-storage
+          persistentVolumeClaim:
+            claimName: sid-bench-rwo
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi

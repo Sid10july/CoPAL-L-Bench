@@ -1,0 +1,106 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sid-dbbench-a100-official
+  namespace: seelab
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "password"
+          ports:
+            - containerPort: 3306
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+
+        - name: bench
+          image: pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
+          resources:
+            requests:
+              cpu: "8"
+              memory: "24Gi"
+              nvidia.com/a100: "1"
+            limits:
+              cpu: "9"
+              memory: "28Gi"
+              nvidia.com/a100: "1"
+          env:
+            - name: DBBENCH_MYSQL_HOST
+              value: "127.0.0.1"
+            - name: DBBENCH_MYSQL_PORT
+              value: "3306"
+            - name: DBBENCH_MYSQL_PASSWORD
+              value: "password"
+            - name: DBBENCH_BANDIT_ENABLE
+              value: "0"
+            - name: PYTORCH_CUDA_ALLOC_CONF
+              value: "expandable_segments:True"
+          volumeMounts:
+            - name: bench-storage
+              mountPath: /work
+            - name: dshm
+              mountPath: /dev/shm
+          workingDir: /work/LifelongAgentBench
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -euo pipefail
+              source /opt/conda/etc/profile.d/conda.sh
+              conda activate /work/conda-py311
+              python3 - <<'PY'
+              import json
+              import os
+              import socket
+              import time
+              from src.factories.chat_history_item.offline.task_requirement import TASK_REQUIREMENT_DICT
+              from src.typings import TaskName
+              host = os.getenv("DBBENCH_MYSQL_HOST", "127.0.0.1")
+              port = int(os.getenv("DBBENCH_MYSQL_PORT", "3306"))
+              for _ in range(180):
+                  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                  s.settimeout(1.0)
+                  try:
+                      s.connect((host, port))
+                      break
+                  except Exception:
+                      time.sleep(1)
+                  finally:
+                      try:
+                          s.close()
+                      except Exception:
+                          pass
+              else:
+                  raise SystemExit("MySQL did not become reachable in time")
+              path = "chat_history_items/standard/db_bench.json"
+              os.makedirs(os.path.dirname(path), exist_ok=True)
+              payload = {
+                  "value": {
+                      "0": {"role": "user", "content": TASK_REQUIREMENT_DICT[TaskName.DB_BENCH]},
+                      "1": {"role": "agent", "content": ""},
+                  }
+              }
+              with open(path, "w") as f:
+                  json.dump(payload, f, indent=2)
+              PY
+              python3 -m src.run_experiment \
+                --config_path configs/assignments/experiments/qwen25_7b_instruct/instance/db_bench/instance/standard.yaml
+      volumes:
+        - name: bench-storage
+          persistentVolumeClaim:
+            claimName: sid-bench-rwo
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
