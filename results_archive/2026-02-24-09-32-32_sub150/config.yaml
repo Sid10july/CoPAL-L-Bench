@@ -1,0 +1,221 @@
+agent_dict:
+  language_model_agent:
+    module: src.agents.instance.language_model_agent.LanguageModelAgent
+    parameters:
+      inference_config_dict: {}
+      language_model: Fill the parameter 'language_model_name' in assignment config.
+      system_prompt: You are a helpful assistant.
+assignment_config:
+  agent:
+    custom_parameters:
+      inference_config_dict:
+        do_sample: false
+        max_new_tokens: 256
+        num_beams: 1
+        temperature: null
+        top_k: null
+        top_p: null
+      language_model: Qwen2.5-7B-Instruct
+    name: language_model_agent
+  callback_dict:
+    callback_0:
+      name: current_session_saving_callback
+    callback_1:
+      name: consecutive_abnormal_agent_inference_process_handling_callback
+    callback_2:
+      name: cost_print_callback
+  language_model_list:
+  - name: Qwen2.5-7B-Instruct
+  output_dir: outputs/{TIMESTAMP}_sub150
+  sample_order:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  - 17
+  - 18
+  - 19
+  - 20
+  - 21
+  - 22
+  - 23
+  - 24
+  - 25
+  - 26
+  - 27
+  - 28
+  - 29
+  - 30
+  - 31
+  - 32
+  - 33
+  - 34
+  - 35
+  - 36
+  - 37
+  - 38
+  - 39
+  - 40
+  - 41
+  - 42
+  - 43
+  - 44
+  - 45
+  - 46
+  - 47
+  - 48
+  - 49
+  - 50
+  - 51
+  - 52
+  - 53
+  - 54
+  - 55
+  - 56
+  - 57
+  - 58
+  - 59
+  - 60
+  - 61
+  - 62
+  - 63
+  - 64
+  - 65
+  - 66
+  - 67
+  - 68
+  - 69
+  - 70
+  - 71
+  - 72
+  - 73
+  - 74
+  - 75
+  - 76
+  - 77
+  - 78
+  - 79
+  - 80
+  - 81
+  - 82
+  - 83
+  - 84
+  - 85
+  - 86
+  - 87
+  - 88
+  - 89
+  - 90
+  - 91
+  - 92
+  - 93
+  - 94
+  - 95
+  - 96
+  - 97
+  - 98
+  - 99
+  - 100
+  - 101
+  - 102
+  - 103
+  - 104
+  - 105
+  - 106
+  - 107
+  - 108
+  - 109
+  - 110
+  - 111
+  - 112
+  - 113
+  - 114
+  - 115
+  - 116
+  - 117
+  - 118
+  - 119
+  - 120
+  - 121
+  - 122
+  - 123
+  - 124
+  - 125
+  - 126
+  - 127
+  - 128
+  - 129
+  - 130
+  - 131
+  - 132
+  - 133
+  - 134
+  - 135
+  - 136
+  - 137
+  - 138
+  - 139
+  - 140
+  - 141
+  - 142
+  - 143
+  - 144
+  - 145
+  - 146
+  - 147
+  - 148
+  - 149
+  task: db_bench
+callback_dict:
+  consecutive_abnormal_agent_inference_process_handling_callback:
+    module: src.callbacks.instance.consecutive_abnormal_agent_inference_process_handling_callback.ConsecutiveAbnormalAgentInferenceProcessHandlingCallback
+    parameters:
+      tolerance_count: 8
+  cost_print_callback:
+    module: src.callbacks.instance.cost_print_callback.CostPrintCallback
+    parameters: {}
+  current_session_saving_callback:
+    module: src.callbacks.instance.current_session_saving_callback.CurrentSessionSavingCallback
+environment_config:
+  use_task_client_flag: false
+language_model_dict:
+  Qwen2.5-7B-Instruct:
+    module: src.language_models.instance.huggingface_language_model.HuggingfaceLanguageModel
+    parameters:
+      device_map: cuda:0
+      dtype: float16
+      model_name_or_path: Qwen/Qwen2.5-7B-Instruct
+      role_dict:
+        agent: assistant
+        user: user
+logger_config:
+  level: INFO
+  log_file_path: default
+  logger_name: lifelong_agent_bench
+task_dict:
+  db_bench:
+    module: src.tasks.instance.db_bench.DBBench
+    parameters:
+      chat_history_item_factory:
+        module: src.factories.chat_history_item.ChatHistoryItemFactory
+        parameters:
+          chat_history_item_dict_path: ./chat_history_items/standard/db_bench.json
+      data_file_path: ./data/v0303/db_bench/processed/v0317_first500/entry_dict.json
+      max_round: 3
+      task_name:
+        module: src.typings.TaskName
+        parameters:
+          value: db_bench

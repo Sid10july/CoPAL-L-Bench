@@ -23,9 +23,11 @@ spec:
             requests:
               cpu: "1"
               memory: "2Gi"
+              ephemeral-storage: "1Gi"
             limits:
               cpu: "1"
               memory: "2Gi"
+              ephemeral-storage: "2Gi"
 
         - name: bench
           image: pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
@@ -33,10 +35,12 @@ spec:
             requests:
               cpu: "8"
               memory: "24Gi"
+              ephemeral-storage: "12Gi"
               nvidia.com/gpu: "1"
             limits:
               cpu: "9"
               memory: "26Gi"
+              ephemeral-storage: "20Gi"
               nvidia.com/gpu: "1"
           env:
             - name: DBBENCH_MYSQL_HOST
@@ -47,6 +51,14 @@ spec:
               value: "password"
             - name: PYTORCH_CUDA_ALLOC_CONF
               value: "expandable_segments:True"
+            - name: HF_HOME
+              value: "/work/.cache/huggingface"
+            - name: TRANSFORMERS_CACHE
+              value: "/work/.cache/huggingface"
+            - name: XDG_CACHE_HOME
+              value: "/work/.cache"
+            - name: TMPDIR
+              value: "/work/tmp"
           volumeMounts:
             - name: bench-storage
               mountPath: /work
@@ -79,8 +91,17 @@ spec:
                           pass
               raise SystemExit("MySQL did not become reachable in time")
               PY
+              set +e
               python3 -m src.run_experiment \
                 --config_path configs/assignments/experiments/qwen25_7b_instruct/instance/db_bench/instance/standard.yaml
+              EXIT_CODE=$?
+              set -e
+              RUN_DIR="$(ls -dt outputs/* 2>/dev/null | head -n1 || true)"
+              if [ -n "${RUN_DIR}" ]; then
+                mkdir -p /work/results_archive
+                cp -r "${RUN_DIR}" /work/results_archive/
+              fi
+              exit ${EXIT_CODE}
       volumes:
         - name: bench-storage
           persistentVolumeClaim:

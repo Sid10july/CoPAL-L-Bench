@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: sid-dbbench-a100-baseline
+  name: sid-dbbench-gpu-flex-bandit-uncertainty-off
   namespace: seelab
 spec:
   backoffLimit: 0
@@ -31,15 +31,15 @@ spec:
           image: pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
           resources:
             requests:
+              cpu: "6"
+              memory: "20Gi"
+              ephemeral-storage: "10Gi"
+              nvidia.com/gpu: "1"
+            limits:
               cpu: "8"
               memory: "24Gi"
-              ephemeral-storage: "12Gi"
-              nvidia.com/a100: "1"
-            limits:
-              cpu: "9"
-              memory: "28Gi"
-              ephemeral-storage: "20Gi"
-              nvidia.com/a100: "1"
+              ephemeral-storage: "16Gi"
+              nvidia.com/gpu: "1"
           env:
             - name: DBBENCH_MYSQL_HOST
               value: "127.0.0.1"
@@ -51,6 +51,46 @@ spec:
               value: "expandable_segments:True"
             - name: LAB_RUN_SEED
               value: "42"
+            - name: DBBENCH_BANDIT_ALPHA
+              value: "0.0"
+            - name: DBBENCH_BANDIT_LAMBDA
+              value: "0.3"
+            - name: DBBENCH_BANDIT_BUDGET_TARGET
+              value: "0.00009"
+            - name: DBBENCH_BANDIT_LAMBDA_LR
+              value: "0.05"
+            - name: DBBENCH_BANDIT_ADAPTIVE_LAMBDA
+              value: "1"
+            - name: DBBENCH_BANDIT_TWO_HEAD
+              value: "1"
+            - name: DBBENCH_BANDIT_POLICY
+              value: "utility"
+            - name: DBBENCH_BANDIT_CORRECTNESS_THRESHOLD
+              value: "0.70"
+            - name: DBBENCH_BANDIT_ADAPTIVE_THRESHOLD
+              value: "1"
+            - name: DBBENCH_BANDIT_TARGET_ACCURACY
+              value: "0.6867"
+            - name: DBBENCH_BANDIT_ACCURACY_TOL
+              value: "0.01"
+            - name: DBBENCH_BANDIT_THRESHOLD_STEP
+              value: "0.005"
+            - name: DBBENCH_BANDIT_THRESHOLD_MIN
+              value: "0.55"
+            - name: DBBENCH_BANDIT_THRESHOLD_MAX
+              value: "0.90"
+            - name: DBBENCH_BANDIT_COST_EMA_DECAY
+              value: "0.9"
+            - name: DBBENCH_BANDIT_COST_GUARDRAIL_ENABLE
+              value: "1"
+            - name: DBBENCH_BANDIT_COST_GUARDRAIL_BAND
+              value: "0.10"
+            - name: DBBENCH_BANDIT_COST_GUARDRAIL_DECAY
+              value: "0.95"
+            - name: DBBENCH_BANDIT_ALLOW_MAX_ARM
+              value: "0"
+            - name: DBBENCH_BANDIT_RESCUE_ENABLE
+              value: "0"
             - name: HF_HOME
               value: "/work/.cache/huggingface"
             - name: TRANSFORMERS_CACHE
@@ -110,6 +150,25 @@ spec:
               set +e
               python3 -m src.run_experiment \
                 --config_path configs/assignments/experiments/qwen25_7b_instruct/instance/db_bench/instance/fast_subsample_150.yaml \
+                --enable_dbbench_bandit \
+                --bandit_alpha ${DBBENCH_BANDIT_ALPHA} \
+                --bandit_lambda ${DBBENCH_BANDIT_LAMBDA} \
+                --bandit_budget_target ${DBBENCH_BANDIT_BUDGET_TARGET} \
+                --bandit_lambda_lr ${DBBENCH_BANDIT_LAMBDA_LR} \
+                --bandit_adaptive_lambda \
+                --bandit_two_head \
+                --bandit_policy ${DBBENCH_BANDIT_POLICY} \
+                --bandit_correctness_threshold ${DBBENCH_BANDIT_CORRECTNESS_THRESHOLD} \
+                --bandit_adaptive_threshold \
+                --bandit_target_accuracy ${DBBENCH_BANDIT_TARGET_ACCURACY} \
+                --bandit_accuracy_tolerance ${DBBENCH_BANDIT_ACCURACY_TOL} \
+                --bandit_threshold_step ${DBBENCH_BANDIT_THRESHOLD_STEP} \
+                --bandit_threshold_min ${DBBENCH_BANDIT_THRESHOLD_MIN} \
+                --bandit_threshold_max ${DBBENCH_BANDIT_THRESHOLD_MAX} \
+                --bandit_cost_ema_decay ${DBBENCH_BANDIT_COST_EMA_DECAY} \
+                --bandit_cost_guardrail_enable \
+                --bandit_cost_guardrail_band ${DBBENCH_BANDIT_COST_GUARDRAIL_BAND} \
+                --bandit_cost_guardrail_decay ${DBBENCH_BANDIT_COST_GUARDRAIL_DECAY} \
                 --seed ${LAB_RUN_SEED}
               EXIT_CODE=$?
               set -e

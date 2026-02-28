@@ -306,6 +306,11 @@ class DBBench(Task[DBBenchDatasetItem]):
         self._set_dataset(dataset)
         # Construct docker container immediately
         self.container = DBBenchContainer()
+        # Optional runtime controls injected by bandit policy.
+        self.tool_budget: Optional[int] = None
+        self.stop_enabled: bool = True
+        self.current_tool_call_count: int = 0
+        self.answer_only_mode: bool = False
 
     @staticmethod
     def _construct_dataset_item(entry: dict[str, Any]) -> DBBenchDatasetItem:
@@ -497,6 +502,8 @@ class DBBench(Task[DBBenchDatasetItem]):
 
     def _reset(self, session: Session) -> None:
         # Initialize the database and chat history
+        self.current_tool_call_count = 0
+        self.answer_only_mode = False
         current_dataset_item: DBBenchDatasetItem = self._get_current_dataset_item()
         init_sql = DBBench._build_init_sql(current_dataset_item)
         self.container.execute(init_sql)
@@ -519,6 +526,28 @@ class DBBench(Task[DBBenchDatasetItem]):
         # region Execute action
         match parser_result.action:
             case AgentAction.EXECUTE:
+                if (
+                    self.tool_budget is not None
+                    and self.current_tool_call_count >= self.tool_budget
+                ):
+                    if self.stop_enabled and not self.answer_only_mode:
+                        self.answer_only_mode = True
+                        session.chat_history.inject(
+                            {
+                                "role": Role.USER,
+                                "content": (
+                                    "Tool budget exhausted. Do not run more SQL. "
+                                    "Use the previous SQL outputs and provide your Final Answer now."
+                                ),
+                            }
+                        )
+                        return
+                    session.sample_status = SampleStatus.TASK_LIMIT_REACHED
+                    session.task_output = self._get_default_task_output()
+                    session.finish_reason = (
+                        f"Tool budget reached. The limit is {self.tool_budget}."
+                    )
+                    return
                 sql = parser_result.content
                 assert sql is not None, "Check DBBench._parse_agent_response()."
                 database_name = current_dataset_item.database_name
@@ -527,8 +556,25 @@ class DBBench(Task[DBBenchDatasetItem]):
                 except Exception as e:
                     session.task_output = self._get_default_task_output()
                     raise TaskEnvironmentException(str(e))
+                self.current_tool_call_count += 1
+                response_suffix = ""
+                if self.tool_budget is not None and self.stop_enabled:
+                    remaining_tool_calls = (
+                        self.tool_budget - self.current_tool_call_count
+                    )
+                    if remaining_tool_calls <= 0:
+                        self.answer_only_mode = True
+                        response_suffix = (
+                            "\n\nTool budget exhausted. Do not run more SQL. "
+                            "Provide your Final Answer now."
+                        )
+                    elif remaining_tool_calls == 1:
+                        response_suffix = (
+                            "\n\nYou have 1 SQL execution remaining. "
+                            "If you have enough information, provide your Final Answer soon."
+                        )
                 session.chat_history.inject(
-                    {"role": Role.USER, "content": user_response}
+                    {"role": Role.USER, "content": user_response + response_suffix}
                 )
                 return
             case AgentAction.FINISH:

@@ -1,0 +1,305 @@
+📘 INFO     | 2026-02-24 09:40:02 | 0:07:30 | Experiment start. Total sample count: 150. Unfinished sample count: 150.
+📘 INFO     | 2026-02-24 09:40:02 | 0:07:30 | Sample 0 start.
+📘 INFO     | 2026-02-24 09:40:17 | 0:07:44 | Sample 0 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:40:17 | 0:07:44 | Sample 1 start.
+📘 INFO     | 2026-02-24 09:40:20 | 0:07:48 | Sample 1 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:40:20 | 0:07:48 | Sample 2 start.
+📘 INFO     | 2026-02-24 09:40:25 | 0:07:53 | Sample 2 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:40:25 | 0:07:53 | Sample 3 start.
+📘 INFO     | 2026-02-24 09:40:27 | 0:07:54 | Sample 3 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:40:27 | 0:07:54 | Sample 4 start.
+📘 INFO     | 2026-02-24 09:40:33 | 0:08:00 | Sample 4 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:40:33 | 0:08:00 | Sample 5 start.
+📘 INFO     | 2026-02-24 09:40:46 | 0:08:14 | Sample 5 end. Session status: task_limit_reached. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:40:46 | 0:08:14 | Sample 6 start.
+📘 INFO     | 2026-02-24 09:40:50 | 0:08:18 | Sample 6 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:40:50 | 0:08:18 | Sample 7 start.
+📘 INFO     | 2026-02-24 09:40:54 | 0:08:21 | Sample 7 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:40:54 | 0:08:22 | Sample 8 start.
+📘 INFO     | 2026-02-24 09:40:55 | 0:08:23 | Sample 8 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:40:55 | 0:08:23 | Sample 9 start.
+📘 INFO     | 2026-02-24 09:41:03 | 0:08:31 | Sample 9 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:41:03 | 0:08:31 | Sample 10 start.
+📘 INFO     | 2026-02-24 09:41:11 | 0:08:38 | Sample 10 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:41:11 | 0:08:39 | Sample 11 start.
+📘 INFO     | 2026-02-24 09:41:16 | 0:08:44 | Sample 11 end. Session status: task_limit_reached. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:41:17 | 0:08:44 | Sample 12 start.
+📘 INFO     | 2026-02-24 09:41:23 | 0:08:51 | Sample 12 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:41:23 | 0:08:51 | Sample 13 start.
+📘 INFO     | 2026-02-24 09:41:32 | 0:09:00 | Sample 13 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:41:33 | 0:09:00 | Sample 14 start.
+📘 INFO     | 2026-02-24 09:41:39 | 0:09:06 | Sample 14 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:41:39 | 0:09:06 | Sample 15 start.
+📘 INFO     | 2026-02-24 09:41:47 | 0:09:15 | Sample 15 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:41:47 | 0:09:15 | Sample 16 start.
+📘 INFO     | 2026-02-24 09:41:54 | 0:09:22 | Sample 16 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:41:54 | 0:09:22 | Sample 17 start.
+📘 INFO     | 2026-02-24 09:42:00 | 0:09:27 | Sample 17 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:42:00 | 0:09:28 | Sample 18 start.
+📘 INFO     | 2026-02-24 09:42:09 | 0:09:37 | Sample 18 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:42:09 | 0:09:37 | Sample 19 start.
+📘 INFO     | 2026-02-24 09:42:26 | 0:09:54 | Sample 19 end. Session status: task_limit_reached. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:42:27 | 0:09:54 | Sample 20 start.
+📘 INFO     | 2026-02-24 09:42:34 | 0:10:02 | Sample 20 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:42:34 | 0:10:02 | Sample 21 start.
+📘 INFO     | 2026-02-24 09:42:41 | 0:10:09 | Sample 21 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:42:41 | 0:10:09 | Sample 22 start.
+📘 INFO     | 2026-02-24 09:42:43 | 0:10:11 | Sample 22 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:42:43 | 0:10:11 | Sample 23 start.
+📘 INFO     | 2026-02-24 09:42:45 | 0:10:13 | Sample 23 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:42:45 | 0:10:13 | Sample 24 start.
+📘 INFO     | 2026-02-24 09:42:54 | 0:10:22 | Sample 24 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:42:54 | 0:10:22 | Sample 25 start.
+📘 INFO     | 2026-02-24 09:42:59 | 0:10:27 | Sample 25 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:42:59 | 0:10:27 | Sample 26 start.
+📘 INFO     | 2026-02-24 09:43:02 | 0:10:30 | Sample 26 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:43:02 | 0:10:30 | Sample 27 start.
+📘 INFO     | 2026-02-24 09:43:10 | 0:10:38 | Sample 27 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:43:10 | 0:10:38 | Sample 28 start.
+📘 INFO     | 2026-02-24 09:43:12 | 0:10:40 | Sample 28 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:43:12 | 0:10:40 | Sample 29 start.
+📘 INFO     | 2026-02-24 09:43:23 | 0:10:51 | Sample 29 end. Session status: task_limit_reached. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:43:24 | 0:10:51 | Sample 30 start.
+📘 INFO     | 2026-02-24 09:43:34 | 0:11:02 | Sample 30 end. Session status: task_limit_reached. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:43:34 | 0:11:02 | Sample 31 start.
+📘 INFO     | 2026-02-24 09:43:46 | 0:11:14 | Sample 31 end. Session status: task_limit_reached. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:43:46 | 0:11:14 | Sample 32 start.
+📘 INFO     | 2026-02-24 09:43:54 | 0:11:22 | Sample 32 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:43:54 | 0:11:22 | Sample 33 start.
+📘 INFO     | 2026-02-24 09:44:02 | 0:11:30 | Sample 33 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:02 | 0:11:30 | Sample 34 start.
+📘 INFO     | 2026-02-24 09:44:08 | 0:11:36 | Sample 34 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:44:08 | 0:11:36 | Sample 35 start.
+📘 INFO     | 2026-02-24 09:44:11 | 0:11:39 | Sample 35 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:11 | 0:11:39 | Sample 36 start.
+📘 INFO     | 2026-02-24 09:44:19 | 0:11:47 | Sample 36 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:19 | 0:11:47 | Sample 37 start.
+📘 INFO     | 2026-02-24 09:44:20 | 0:11:48 | Sample 37 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:20 | 0:11:48 | Sample 38 start.
+📘 INFO     | 2026-02-24 09:44:23 | 0:11:51 | Sample 38 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:24 | 0:11:51 | Sample 39 start.
+📘 INFO     | 2026-02-24 09:44:31 | 0:11:58 | Sample 39 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:31 | 0:11:58 | Sample 40 start.
+📘 INFO     | 2026-02-24 09:44:32 | 0:12:00 | Sample 40 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:32 | 0:12:00 | Sample 41 start.
+📘 INFO     | 2026-02-24 09:44:40 | 0:12:08 | Sample 41 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:44:40 | 0:12:08 | Sample 42 start.
+📘 INFO     | 2026-02-24 09:44:47 | 0:12:15 | Sample 42 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:47 | 0:12:15 | Sample 43 start.
+📘 INFO     | 2026-02-24 09:44:49 | 0:12:17 | Sample 43 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:49 | 0:12:17 | Sample 44 start.
+📘 INFO     | 2026-02-24 09:44:53 | 0:12:21 | Sample 44 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:54 | 0:12:21 | Sample 45 start.
+📘 INFO     | 2026-02-24 09:44:55 | 0:12:23 | Sample 45 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:55 | 0:12:23 | Sample 46 start.
+📘 INFO     | 2026-02-24 09:44:56 | 0:12:24 | Sample 46 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:44:56 | 0:12:24 | Sample 47 start.
+📘 INFO     | 2026-02-24 09:45:03 | 0:12:31 | Sample 47 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:45:03 | 0:12:31 | Sample 48 start.
+📘 INFO     | 2026-02-24 09:45:09 | 0:12:37 | Sample 48 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:45:09 | 0:12:37 | Sample 49 start.
+📘 INFO     | 2026-02-24 09:45:14 | 0:12:42 | Sample 49 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:45:14 | 0:12:42 | Sample 50 start.
+📘 INFO     | 2026-02-24 09:45:23 | 0:12:51 | Sample 50 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:45:23 | 0:12:51 | Sample 51 start.
+📘 INFO     | 2026-02-24 09:45:27 | 0:12:54 | Sample 51 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:45:27 | 0:12:55 | Sample 52 start.
+📘 INFO     | 2026-02-24 09:45:40 | 0:13:07 | Sample 52 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:45:40 | 0:13:07 | Sample 53 start.
+📘 INFO     | 2026-02-24 09:45:47 | 0:13:15 | Sample 53 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:45:47 | 0:13:15 | Sample 54 start.
+📘 INFO     | 2026-02-24 09:45:57 | 0:13:24 | Sample 54 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:45:57 | 0:13:25 | Sample 55 start.
+📘 INFO     | 2026-02-24 09:46:02 | 0:13:30 | Sample 55 end. Session status: task_limit_reached. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:46:02 | 0:13:30 | Sample 56 start.
+📘 INFO     | 2026-02-24 09:46:07 | 0:13:35 | Sample 56 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:46:07 | 0:13:35 | Sample 57 start.
+📘 INFO     | 2026-02-24 09:46:09 | 0:13:37 | Sample 57 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:46:09 | 0:13:37 | Sample 58 start.
+📘 INFO     | 2026-02-24 09:46:16 | 0:13:44 | Sample 58 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:46:16 | 0:13:44 | Sample 59 start.
+📘 INFO     | 2026-02-24 09:46:18 | 0:13:46 | Sample 59 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:46:18 | 0:13:46 | Sample 60 start.
+📘 INFO     | 2026-02-24 09:46:20 | 0:13:47 | Sample 60 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:46:20 | 0:13:47 | Sample 61 start.
+📘 INFO     | 2026-02-24 09:46:28 | 0:13:55 | Sample 61 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:46:28 | 0:13:55 | Sample 62 start.
+📘 INFO     | 2026-02-24 09:46:40 | 0:14:07 | Sample 62 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:46:40 | 0:14:07 | Sample 63 start.
+📘 INFO     | 2026-02-24 09:46:43 | 0:14:10 | Sample 63 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:46:43 | 0:14:10 | Sample 64 start.
+📘 INFO     | 2026-02-24 09:46:51 | 0:14:18 | Sample 64 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:46:51 | 0:14:18 | Sample 65 start.
+📘 INFO     | 2026-02-24 09:46:58 | 0:14:26 | Sample 65 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:46:58 | 0:14:26 | Sample 66 start.
+📘 INFO     | 2026-02-24 09:47:08 | 0:14:36 | Sample 66 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:47:08 | 0:14:36 | Sample 67 start.
+📘 INFO     | 2026-02-24 09:47:10 | 0:14:37 | Sample 67 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:47:10 | 0:14:37 | Sample 68 start.
+📘 INFO     | 2026-02-24 09:47:29 | 0:14:56 | Sample 68 end. Session status: task_limit_reached. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:47:29 | 0:14:57 | Sample 69 start.
+📘 INFO     | 2026-02-24 09:47:38 | 0:15:06 | Sample 69 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:47:39 | 0:15:06 | Sample 70 start.
+📘 INFO     | 2026-02-24 09:47:48 | 0:15:15 | Sample 70 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:47:48 | 0:15:15 | Sample 71 start.
+📘 INFO     | 2026-02-24 09:47:49 | 0:15:17 | Sample 71 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:47:50 | 0:15:17 | Sample 72 start.
+📘 INFO     | 2026-02-24 09:47:54 | 0:15:22 | Sample 72 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:47:55 | 0:15:22 | Sample 73 start.
+📘 INFO     | 2026-02-24 09:47:59 | 0:15:27 | Sample 73 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:47:59 | 0:15:27 | Sample 74 start.
+📘 INFO     | 2026-02-24 09:48:07 | 0:15:35 | Sample 74 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:48:07 | 0:15:35 | Sample 75 start.
+📘 INFO     | 2026-02-24 09:48:15 | 0:15:42 | Sample 75 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:48:15 | 0:15:42 | Sample 76 start.
+📘 INFO     | 2026-02-24 09:48:21 | 0:15:49 | Sample 76 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:48:21 | 0:15:49 | Sample 77 start.
+📘 INFO     | 2026-02-24 09:48:30 | 0:15:58 | Sample 77 end. Session status: task_limit_reached. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:48:30 | 0:15:58 | Sample 78 start.
+📘 INFO     | 2026-02-24 09:48:36 | 0:16:04 | Sample 78 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:48:36 | 0:16:04 | Sample 79 start.
+📘 INFO     | 2026-02-24 09:48:44 | 0:16:11 | Sample 79 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:48:44 | 0:16:11 | Sample 80 start.
+📘 INFO     | 2026-02-24 09:48:50 | 0:16:18 | Sample 80 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:48:50 | 0:16:18 | Sample 81 start.
+📘 INFO     | 2026-02-24 09:49:02 | 0:16:30 | Sample 81 end. Session status: task_limit_reached. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:49:03 | 0:16:30 | Sample 82 start.
+📘 INFO     | 2026-02-24 09:49:11 | 0:16:39 | Sample 82 end. Session status: task_limit_reached. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:49:11 | 0:16:39 | Sample 83 start.
+📘 INFO     | 2026-02-24 09:49:13 | 0:16:40 | Sample 83 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:49:13 | 0:16:41 | Sample 84 start.
+📘 INFO     | 2026-02-24 09:49:19 | 0:16:47 | Sample 84 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:49:19 | 0:16:47 | Sample 85 start.
+📘 INFO     | 2026-02-24 09:49:26 | 0:16:54 | Sample 85 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:49:26 | 0:16:54 | Sample 86 start.
+📘 INFO     | 2026-02-24 09:49:33 | 0:17:01 | Sample 86 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:49:33 | 0:17:01 | Sample 87 start.
+📘 INFO     | 2026-02-24 09:49:43 | 0:17:10 | Sample 87 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:49:43 | 0:17:11 | Sample 88 start.
+📘 INFO     | 2026-02-24 09:49:56 | 0:17:24 | Sample 88 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:49:56 | 0:17:24 | Sample 89 start.
+📘 INFO     | 2026-02-24 09:50:03 | 0:17:31 | Sample 89 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:50:03 | 0:17:31 | Sample 90 start.
+📘 INFO     | 2026-02-24 09:50:11 | 0:17:39 | Sample 90 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:50:11 | 0:17:39 | Sample 91 start.
+📘 INFO     | 2026-02-24 09:50:12 | 0:17:40 | Sample 91 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:50:12 | 0:17:40 | Sample 92 start.
+📘 INFO     | 2026-02-24 09:50:14 | 0:17:42 | Sample 92 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:50:14 | 0:17:42 | Sample 93 start.
+📘 INFO     | 2026-02-24 09:50:19 | 0:17:46 | Sample 93 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:50:19 | 0:17:46 | Sample 94 start.
+📘 INFO     | 2026-02-24 09:50:23 | 0:17:51 | Sample 94 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:50:23 | 0:17:51 | Sample 95 start.
+📘 INFO     | 2026-02-24 09:50:30 | 0:17:58 | Sample 95 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:50:30 | 0:17:58 | Sample 96 start.
+📘 INFO     | 2026-02-24 09:50:40 | 0:18:08 | Sample 96 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:50:40 | 0:18:08 | Sample 97 start.
+📘 INFO     | 2026-02-24 09:50:42 | 0:18:10 | Sample 97 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:50:42 | 0:18:10 | Sample 98 start.
+📘 INFO     | 2026-02-24 09:50:44 | 0:18:12 | Sample 98 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:50:44 | 0:18:12 | Sample 99 start.
+📘 INFO     | 2026-02-24 09:50:50 | 0:18:18 | Sample 99 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:50:50 | 0:18:18 | Sample 100 start.
+📘 INFO     | 2026-02-24 09:50:55 | 0:18:22 | Sample 100 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:50:55 | 0:18:22 | Sample 101 start.
+📘 INFO     | 2026-02-24 09:50:57 | 0:18:25 | Sample 101 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:50:57 | 0:18:25 | Sample 102 start.
+📘 INFO     | 2026-02-24 09:51:02 | 0:18:30 | Sample 102 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:51:02 | 0:18:30 | Sample 103 start.
+📘 INFO     | 2026-02-24 09:51:09 | 0:18:37 | Sample 103 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:51:09 | 0:18:37 | Sample 104 start.
+📘 INFO     | 2026-02-24 09:51:15 | 0:18:42 | Sample 104 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:51:15 | 0:18:42 | Sample 105 start.
+📘 INFO     | 2026-02-24 09:51:23 | 0:18:51 | Sample 105 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:51:23 | 0:18:51 | Sample 106 start.
+📘 INFO     | 2026-02-24 09:51:26 | 0:18:54 | Sample 106 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:51:27 | 0:18:54 | Sample 107 start.
+📘 INFO     | 2026-02-24 09:51:37 | 0:19:05 | Sample 107 end. Session status: task_limit_reached. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:51:37 | 0:19:05 | Sample 108 start.
+📘 INFO     | 2026-02-24 09:51:39 | 0:19:06 | Sample 108 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:51:39 | 0:19:06 | Sample 109 start.
+📘 INFO     | 2026-02-24 09:51:49 | 0:19:17 | Sample 109 end. Session status: agent_validation_failed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:51:50 | 0:19:17 | Sample 110 start.
+📘 INFO     | 2026-02-24 09:51:59 | 0:19:26 | Sample 110 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:51:59 | 0:19:27 | Sample 111 start.
+📘 INFO     | 2026-02-24 09:52:05 | 0:19:33 | Sample 111 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:52:06 | 0:19:33 | Sample 112 start.
+📘 INFO     | 2026-02-24 09:52:15 | 0:19:42 | Sample 112 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:52:15 | 0:19:43 | Sample 113 start.
+📘 INFO     | 2026-02-24 09:52:19 | 0:19:47 | Sample 113 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:52:19 | 0:19:47 | Sample 114 start.
+📘 INFO     | 2026-02-24 09:52:27 | 0:19:55 | Sample 114 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:52:27 | 0:19:55 | Sample 115 start.
+📘 INFO     | 2026-02-24 09:52:36 | 0:20:03 | Sample 115 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:52:36 | 0:20:04 | Sample 116 start.
+📘 INFO     | 2026-02-24 09:52:42 | 0:20:10 | Sample 116 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:52:42 | 0:20:10 | Sample 117 start.
+📘 INFO     | 2026-02-24 09:52:45 | 0:20:13 | Sample 117 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:52:45 | 0:20:13 | Sample 118 start.
+📘 INFO     | 2026-02-24 09:52:47 | 0:20:14 | Sample 118 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:52:47 | 0:20:14 | Sample 119 start.
+📘 INFO     | 2026-02-24 09:52:48 | 0:20:16 | Sample 119 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:52:48 | 0:20:16 | Sample 120 start.
+📘 INFO     | 2026-02-24 09:52:59 | 0:20:27 | Sample 120 end. Session status: task_limit_reached. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:52:59 | 0:20:27 | Sample 121 start.
+📘 INFO     | 2026-02-24 09:53:06 | 0:20:34 | Sample 121 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:53:06 | 0:20:34 | Sample 122 start.
+📘 INFO     | 2026-02-24 09:53:17 | 0:20:45 | Sample 122 end. Session status: task_limit_reached. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:53:17 | 0:20:45 | Sample 123 start.
+📘 INFO     | 2026-02-24 09:53:25 | 0:20:53 | Sample 123 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:53:25 | 0:20:53 | Sample 124 start.
+📘 INFO     | 2026-02-24 09:53:28 | 0:20:56 | Sample 124 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:53:28 | 0:20:56 | Sample 125 start.
+📘 INFO     | 2026-02-24 09:53:30 | 0:20:57 | Sample 125 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:53:30 | 0:20:57 | Sample 126 start.
+📘 INFO     | 2026-02-24 09:53:34 | 0:21:02 | Sample 126 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:53:34 | 0:21:02 | Sample 127 start.
+📘 INFO     | 2026-02-24 09:53:37 | 0:21:05 | Sample 127 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:53:37 | 0:21:05 | Sample 128 start.
+📘 INFO     | 2026-02-24 09:53:43 | 0:21:11 | Sample 128 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:53:43 | 0:21:11 | Sample 129 start.
+📘 INFO     | 2026-02-24 09:53:53 | 0:21:21 | Sample 129 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:53:53 | 0:21:21 | Sample 130 start.
+📘 INFO     | 2026-02-24 09:53:59 | 0:21:26 | Sample 130 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:53:59 | 0:21:27 | Sample 131 start.
+📘 INFO     | 2026-02-24 09:54:07 | 0:21:35 | Sample 131 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:54:07 | 0:21:35 | Sample 132 start.
+📘 INFO     | 2026-02-24 09:54:12 | 0:21:39 | Sample 132 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:54:12 | 0:21:39 | Sample 133 start.
+📘 INFO     | 2026-02-24 09:54:17 | 0:21:44 | Sample 133 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:54:17 | 0:21:44 | Sample 134 start.
+📘 INFO     | 2026-02-24 09:54:31 | 0:21:59 | Sample 134 end. Session status: task_limit_reached. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:54:31 | 0:21:59 | Sample 135 start.
+📘 INFO     | 2026-02-24 09:54:41 | 0:22:09 | Sample 135 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:54:41 | 0:22:09 | Sample 136 start.
+📘 INFO     | 2026-02-24 09:54:48 | 0:22:15 | Sample 136 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:54:48 | 0:22:15 | Sample 137 start.
+📘 INFO     | 2026-02-24 09:54:50 | 0:22:17 | Sample 137 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:54:50 | 0:22:17 | Sample 138 start.
+📘 INFO     | 2026-02-24 09:54:56 | 0:22:24 | Sample 138 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:54:56 | 0:22:24 | Sample 139 start.
+📘 INFO     | 2026-02-24 09:54:57 | 0:22:25 | Sample 139 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:54:58 | 0:22:25 | Sample 140 start.
+📘 INFO     | 2026-02-24 09:55:01 | 0:22:29 | Sample 140 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:55:01 | 0:22:29 | Sample 141 start.
+📘 INFO     | 2026-02-24 09:55:12 | 0:22:40 | Sample 141 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:55:12 | 0:22:40 | Sample 142 start.
+📘 INFO     | 2026-02-24 09:55:13 | 0:22:41 | Sample 142 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:55:14 | 0:22:41 | Sample 143 start.
+📘 INFO     | 2026-02-24 09:55:21 | 0:22:49 | Sample 143 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:55:21 | 0:22:49 | Sample 144 start.
+📘 INFO     | 2026-02-24 09:55:23 | 0:22:50 | Sample 144 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:55:23 | 0:22:50 | Sample 145 start.
+📘 INFO     | 2026-02-24 09:55:32 | 0:23:00 | Sample 145 end. Session status: task_limit_reached. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:55:32 | 0:23:00 | Sample 146 start.
+📘 INFO     | 2026-02-24 09:55:40 | 0:23:08 | Sample 146 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:55:40 | 0:23:08 | Sample 147 start.
+📘 INFO     | 2026-02-24 09:55:44 | 0:23:12 | Sample 147 end. Session status: completed. Evaluation outcome: correct.
+📘 INFO     | 2026-02-24 09:55:45 | 0:23:12 | Sample 148 start.
+📘 INFO     | 2026-02-24 09:55:51 | 0:23:19 | Sample 148 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:55:51 | 0:23:19 | Sample 149 start.
+📘 INFO     | 2026-02-24 09:55:59 | 0:23:27 | Sample 149 end. Session status: completed. Evaluation outcome: incorrect.
+📘 INFO     | 2026-02-24 09:56:01 | 0:23:29 | Experiment end. Metric: {'skill': {'count_dict': {'column_alias': 60, 'delete': 14, 'group_by_multiple_columns': 25, 'group_by_single_column': 33, 'having_aggregate_calculation': 11, 'having_multiple_conditions_with_aggregate': 23, 'having_single_condition_with_aggregate': 24, 'insert': 12, 'limit_and_offset': 9, 'limit_only': 22, 'order_by_multiple_columns_different_directions': 22, 'order_by_multiple_columns_same_direction': 15, 'order_by_single_column': 14, 'select': 124, 'subquery_multiple': 18, 'subquery_nested': 21, 'subquery_single': 10, 'table_alias': 30, 'update': 20, 'where_multiple_conditions': 28, 'where_nested_conditions': 18, 'where_single_condition': 39}, 'correct_count_dict': {'column_alias': 46, 'delete': 10, 'group_by_multiple_columns': 19, 'group_by_single_column': 25, 'having_aggregate_calculation': 9, 'having_multiple_conditions_with_aggregate': 16, 'having_single_condition_with_aggregate': 18, 'insert': 7, 'limit_and_offset': 4, 'limit_only': 18, 'order_by_multiple_columns_different_directions': 13, 'order_by_multiple_columns_same_direction': 11, 'order_by_single_column': 11, 'select': 79, 'subquery_multiple': 8, 'subquery_nested': 10, 'subquery_single': 7, 'table_alias': 18, 'update': 15, 'where_multiple_conditions': 18, 'where_nested_conditions': 9, 'where_single_condition': 31}, 'correct_rate_dict': {'column_alias': 0.7666666666666667, 'delete': 0.7142857142857143, 'group_by_multiple_columns': 0.76, 'group_by_single_column': 0.7575757575757576, 'having_aggregate_calculation': 0.8181818181818182, 'having_multiple_conditions_with_aggregate': 0.6956521739130435, 'having_single_condition_with_aggregate': 0.75, 'insert': 0.5833333333333334, 'limit_and_offset': 0.4444444444444444, 'limit_only': 0.8181818181818182, 'order_by_multiple_columns_different_directions': 0.5909090909090909, 'order_by_multiple_columns_same_direction': 0.7333333333333333, 'order_by_single_column': 0.7857142857142857, 'select': 0.6370967741935484, 'subquery_multiple': 0.4444444444444444, 'subquery_nested': 0.47619047619047616, 'subquery_single': 0.7, 'table_alias': 0.6, 'update': 0.75, 'where_multiple_conditions': 0.6428571428571429, 'where_nested_conditions': 0.5, 'where_single_condition': 0.7948717948717948}, 'effective_count_dict': {'column_alias': 60, 'delete': 14, 'group_by_multiple_columns': 25, 'group_by_single_column': 33, 'having_aggregate_calculation': 11, 'having_multiple_conditions_with_aggregate': 23, 'having_single_condition_with_aggregate': 24, 'insert': 12, 'limit_and_offset': 9, 'limit_only': 22, 'order_by_multiple_columns_different_directions': 22, 'order_by_multiple_columns_same_direction': 15, 'order_by_single_column': 14, 'select': 124, 'subquery_multiple': 18, 'subquery_nested': 21, 'subquery_single': 10, 'table_alias': 30, 'update': 20, 'where_multiple_conditions': 28, 'where_nested_conditions': 18, 'where_single_condition': 39}, 'effective_correct_count_dict': {'column_alias': 46, 'delete': 10, 'group_by_multiple_columns': 19, 'group_by_single_column': 25, 'having_aggregate_calculation': 9, 'having_multiple_conditions_with_aggregate': 16, 'having_single_condition_with_aggregate': 18, 'insert': 7, 'limit_and_offset': 4, 'limit_only': 18, 'order_by_multiple_columns_different_directions': 13, 'order_by_multiple_columns_same_direction': 11, 'order_by_single_column': 11, 'select': 79, 'subquery_multiple': 8, 'subquery_nested': 10, 'subquery_single': 7, 'table_alias': 18, 'update': 15, 'where_multiple_conditions': 18, 'where_nested_conditions': 9, 'where_single_condition': 31}, 'effective_correct_rate_dict': {'column_alias': 0.7666666666666667, 'delete': 0.7142857142857143, 'group_by_multiple_columns': 0.76, 'group_by_single_column': 0.7575757575757576, 'having_aggregate_calculation': 0.8181818181818182, 'having_multiple_conditions_with_aggregate': 0.6956521739130435, 'having_single_condition_with_aggregate': 0.75, 'insert': 0.5833333333333334, 'limit_and_offset': 0.4444444444444444, 'limit_only': 0.8181818181818182, 'order_by_multiple_columns_different_directions': 0.5909090909090909, 'order_by_multiple_columns_same_direction': 0.7333333333333333, 'order_by_single_column': 0.7857142857142857, 'select': 0.6370967741935484, 'subquery_multiple': 0.4444444444444444, 'subquery_nested': 0.47619047619047616, 'subquery_single': 0.7, 'table_alias': 0.6, 'update': 0.75, 'where_multiple_conditions': 0.6428571428571429, 'where_nested_conditions': 0.5, 'where_single_condition': 0.7948717948717948}}, 'difficulty_level': {'count_dict': {'0': 150}, 'correct_count_dict': {'0': 102}, 'correct_rate_dict': {'0': 0.68}}, 'overall': {'basic': {'session_count': 150.0}, 'evaluation_outcome': {'unset': 0.0, 'correct': 0.68, 'incorrect': 0.32, 'unknown': 0.0, 'ignored': 0.0}, 'sample_status': {'initial': 0.0, 'running': 0.0, 'completed': 0.8866666666666667, 'agent_validation_failed': 0.006666666666666667, 'task_limit_reached': 0.10666666666666667, 'task_environment_error': 0.0, 'task_unknown_error': 0.0, 'agent_context_limit': 0.0, 'agent_out_of_memory': 0.0, 'agent_unknown_error': 0.0}}, 'cost': {'total_prompt_tokens': 250192, 'total_completion_tokens': 34773, 'total_tokens': 284965, 'total_cost_usd': 0.01348498, 'mean_cost_per_sample_usd': 8.989986666666667e-05}}. Total sample count: 150.
+📘 INFO     | 2026-02-24 09:56:01 | 0:23:29 | [RunCostSummary] input_tokens=250192, output_tokens=34773, total_tokens=284965, total_cost_usd=0.013485, mean_cost_per_sample_usd=0.000090
+📘 INFO     | 2026-02-24 09:56:01 | 0:23:29 | Metric file has been saved to outputs/2026-02-24-09-32-32_sub150.
+📘 INFO     | 2026-02-24 09:56:01 | 0:23:29 | [CostTracker] wrote outputs/2026-02-24-09-32-32_sub150/metrics/token_cost_summary.json

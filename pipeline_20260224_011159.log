@@ -1,0 +1,10 @@
+[1/8] Cleanup old jobs/pods
+pod "sid-sync-pod" force deleted from seelab namespace
+[2/8] Create sync pod
+pod/sid-sync-pod created
+pod/sid-sync-pod condition met
+[3/8] Sync files to PVC
+[4/8] Remove sync pod
+pod "sid-sync-pod" deleted from seelab namespace
+[5/8] Run baseline job
+job.batch/sid-dbbench-a100-baseline created

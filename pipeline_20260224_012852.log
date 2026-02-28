@@ -1,0 +1,9 @@
+[1/9] Pre-clean
+[2/9] Create sync pod
+pod/sid-sync-pod created
+pod/sid-sync-pod condition met
+[3/9] Sync code/yaml to PVC
+[4/9] Remove sync pod (free RWO PVC)
+pod "sid-sync-pod" force deleted from seelab namespace
+[5/9] Run baseline
+job.batch/sid-dbbench-a100-baseline created
